@@ -4,10 +4,11 @@
 #include <utility>
 #include "eb_helpers.h"
 #include "inet/networklayer/base/NetworkProtocolBase.h"
+#include "inet/networklayer/contract/INetworkProtocol.h"
 
 using namespace inet;
 
-class MintRoute : public NetworkProtocolBase {
+class MintRoute : public NetworkProtocolBase, public INetworkProtocol {
  protected:
   std::map<int, int> xmittedPkts;
   std::map<int, int> middleware;
@@ -78,7 +79,16 @@ class MintRoute : public NetworkProtocolBase {
   std::map<int, int> deadNbrs;
   std::map<int, int> chosenNDs;
 
+  // Protocol identity; defined in the .cc against a file-local Protocol.
+  const Protocol& getProtocol() const override;
+
   void handleUpperPacket(Packet *packet) override;
   void handleLowerPacket(Packet *packet) override;
   void initialize(int stage) override;
+
+  // Lifecycle hooks are pure virtual in OperationalMixin; empty bodies keep the
+  // module concrete. Start/stop/crash logic is a project Phase 4 fill-in.
+  void handleStartOperation(LifecycleOperation *operation) override {}
+  void handleStopOperation(LifecycleOperation *operation) override {}
+  void handleCrashOperation(LifecycleOperation *operation) override {}
 };

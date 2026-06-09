@@ -32,4 +32,32 @@ describe("codeEmitter", () => {
     expect(tree.some((f) => f.path.endsWith("omnetpp.ini"))).toBe(true);
     expect(tree.some((f) => f.path.endsWith("eb_helpers.h"))).toBe(true);
   });
+
+  // NetworkProtocolBase leaves getProtocol() pure virtual, and OperationalMixin
+  // leaves handleStartOperation/Stop/Crash pure virtual. All four must be
+  // overridden or Define_Module instantiates an abstract class and the build
+  // fails. (Verified against inet4.5 NetworkProtocolBase.h / OperationalMixin.h.)
+  it("overrides every pure virtual so the module is concrete", () => {
+    const h = file("RTMCS.h");
+    expect(h).toContain("const Protocol& getProtocol() const override");
+    expect(h).toContain("void handleStartOperation(LifecycleOperation *operation) override");
+    expect(h).toContain("void handleStopOperation(LifecycleOperation *operation) override");
+    expect(h).toContain("void handleCrashOperation(LifecycleOperation *operation) override");
+  });
+  it("implements the INetworkProtocol marker interface from the .ned 'like'", () => {
+    expect(file("RTMCS.h")).toContain("public INetworkProtocol");
+    expect(file("RTMCS.h")).toContain('#include "inet/networklayer/contract/INetworkProtocol.h"');
+  });
+  it("registers a Protocol and returns it from getProtocol", () => {
+    const cc = file("RTMCS.cc");
+    expect(cc).toContain('#include "inet/common/Protocol.h"');
+    expect(cc).toMatch(/static const Protocol \w+\("rtmcs", "RTMCS", Protocol::NetworkLayer\);/);
+    expect(cc).toMatch(/const Protocol& RTMCS::getProtocol\(\) const \{ return \w+; \}/);
+  });
+  it("emits an INET-idiomatic .ned that extends NetworkProtocolBase", () => {
+    const ned = file("RTMCS.ned");
+    expect(ned).toContain("import inet.networklayer.base.NetworkProtocolBase;");
+    expect(ned).toContain("simple RTMCS extends NetworkProtocolBase like INetworkProtocol");
+    expect(ned).toContain("@class(RTMCS);");
+  });
 });
