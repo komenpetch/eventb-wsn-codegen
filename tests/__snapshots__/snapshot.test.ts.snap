@@ -1,0 +1,448 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CodeEmitter — full-file snapshots > eb_helpers.h (shared) 1`] = `
+"#pragma once
+// eb_helpers.h — templated helper library for Event-B → C++ generated code.
+// Helper set transcribed from design/translation_rules_examples.md v3.1
+// §"Helper Functions Required". The CommPattern canonical names
+// (domRestrictedRange, tupleApply, relationalImage, routeNodeAt, routeLength)
+// are the emission names; the eb_* names are documentation aliases.
+#include <map>
+#include <set>
+#include <utility>
+
+// ─── Constant-function accessors ───────────────────────────────────────────
+// The Event-B constant function \`type ∈ PKT → TYPE\` has no machine-variable
+// storage, so rule R1 (type(x) ∈ S) needs a free accessor. Packet type is held
+// in this registry; project Phase 4 populates it when packets are constructed.
+inline std::map<int, int>& ebPacketTypes() { static std::map<int, int> t; return t; }
+inline int getType(int pkt) {                                            // R1
+  auto it = ebPacketTypes().find(pkt);
+  return it != ebPacketTypes().end() ? it->second : -1;
+}
+
+// ─── Function-form helpers (std::map<K, V>) ────────────────────────────────
+template <typename K, typename V>
+bool eb_in_range(const std::map<K, V>& R, const V& x) {                  // A3
+  for (const auto& kv : R) if (kv.second == x) return true;
+  return false;
+}
+
+template <typename K, typename V>
+std::map<K, V> eb_dom_restrict(const std::set<K>& D,
+                               const std::map<K, V>& R) {                // R5
+  std::map<K, V> out;
+  for (const auto& kv : R) if (D.count(kv.first)) out.insert(kv);
+  return out;
+}
+
+template <typename K, typename V>
+std::map<K, V> eb_dom_restrict_single(const K& k,
+                                      const std::map<K, V>& R) {         // R5
+  std::map<K, V> out;
+  auto it = R.find(k);
+  if (it != R.end()) out.insert(*it);
+  return out;
+}
+
+template <typename K, typename V>
+std::set<V> eb_rel_image(const std::map<K, V>& R,
+                         const std::set<K>& S) {                        // R7
+  std::set<V> out;
+  for (const auto& k : S) { auto it = R.find(k); if (it != R.end()) out.insert(it->second); }
+  return out;
+}
+
+template <typename K, typename V>
+std::set<V> eb_rel_image_single(const std::map<K, V>& R, const K& x) {   // R7
+  std::set<V> out;
+  auto it = R.find(x);
+  if (it != R.end()) out.insert(it->second);
+  return out;
+}
+
+template <typename K, typename V>
+std::map<K, V> eb_range_anti_restrict(const std::map<K, V>& R,
+                                      const std::set<V>& excluded) {     // R8
+  std::map<K, V> out;
+  for (const auto& kv : R) if (!excluded.count(kv.second)) out.insert(kv);
+  return out;
+}
+
+template <typename K, typename V>
+bool eb_in_range_union(const std::map<K, V>& R,
+                       const std::map<K, V>& S, const V& x) {            // R10
+  for (const auto& kv : R) if (kv.second == x) return true;
+  for (const auto& kv : S) if (kv.second == x) return true;
+  return false;
+}
+
+template <typename K, typename V>
+bool eb_in_range_union3(const std::map<K, V>& R, const std::map<K, V>& S,
+                        const std::map<K, V>& T, const V& x) {           // R10
+  return eb_in_range_union(R, S, x) || eb_in_range(T, x);
+}
+
+// ─── Map-of-sets helpers (std::map<A, std::set<B>>) ────────────────────────
+template <typename A, typename B>
+bool eb_in_range_rel(const std::map<A, std::set<B>>& R, const B& x) {    // A3
+  for (const auto& kv : R) if (kv.second.count(x)) return true;
+  return false;
+}
+
+template <typename A, typename B>
+std::set<B> eb_ran_dom_restrict_rel_single(const A& k,
+                                           const std::map<A, std::set<B>>& R) {  // R7
+  auto it = R.find(k);
+  return it != R.end() ? it->second : std::set<B>{};
+}
+
+template <typename A, typename B>
+std::set<B> relationalImage(const std::map<A, std::set<B>>& R, const A& k) {     // R7 (canonical)
+  auto it = R.find(k);
+  return it != R.end() ? it->second : std::set<B>{};
+}
+
+// ─── Pair-set helpers (std::set<std::pair<A, B>>) ──────────────────────────
+template <typename A, typename B>
+bool eb_in_dom_pairset(const std::set<std::pair<A, B>>& R, const A& x) {         // R2
+  for (const auto& p : R) if (p.first == x) return true;
+  return false;
+}
+
+template <typename A, typename B>
+bool eb_in_range_pairset(const std::set<std::pair<A, B>>& R, const B& x) {       // A3
+  for (const auto& p : R) if (p.second == x) return true;
+  return false;
+}
+
+template <typename A, typename B>
+bool eb_in_dom_union_pairset(const std::set<std::pair<A, B>>& R,
+                             const std::set<std::pair<A, B>>& S, const A& x) {    // R12
+  for (const auto& p : R) if (p.first == x) return true;
+  for (const auto& p : S) if (p.first == x) return true;
+  return false;
+}
+
+template <typename A, typename B>
+bool eb_in_range_union_pairset(const std::set<std::pair<A, B>>& R,
+                               const std::set<std::pair<A, B>>& S, const B& x) {  // R10
+  for (const auto& p : R) if (p.second == x) return true;
+  for (const auto& p : S) if (p.second == x) return true;
+  return false;
+}
+
+// Range-over-union membership (R10), pair-set form (matches RULES R10 emission)
+template <typename A, typename B>
+bool eb_in_range_union(const std::set<std::pair<A, B>>& R,
+                       const std::set<std::pair<A, B>>& S, const B& x) {          // R10
+  for (const auto& p : R) if (p.second == x) return true;
+  for (const auto& p : S) if (p.second == x) return true;
+  return false;
+}
+
+template <typename A, typename B>
+void eb_range_anti_restrict_pairset(std::set<std::pair<A, B>>& R,
+                                    const std::set<B>& excluded) {                // R8
+  for (auto it = R.begin(); it != R.end();) {
+    if (excluded.count(it->second)) it = R.erase(it);
+    else ++it;
+  }
+}
+
+// ─── PairRouteTable helpers (CommPattern canonical names) ──────────────────
+// Pair-keyed domain-restricted range (R17 / Form A)
+template <typename X, typename S, typename V>
+std::set<S> domRestrictedRange(const std::map<std::pair<X, S>, V>& R, const X& x) {
+  std::set<S> out;
+  for (const auto& kv : R) if (kv.first.first == x) out.insert(kv.first.second);
+  return out;
+}
+
+// Pair-keyed function application (R18 / Form B)
+template <typename X, typename S, typename V>
+V tupleApply(const std::map<std::pair<X, S>, V>& R, const X& x, const S& s) {
+  return R.at({x, s});
+}
+
+// ─── SourceRouteCache helpers (DSR-only, flat encoding dsrPath ∈ (PKT×ℕ)→ND) ─
+inline int routeNodeAt(const std::map<std::pair<int, int>, int>& dsrPath, int pkt, int idx) {  // R19
+  return dsrPath.at({pkt, idx});
+}
+
+inline int routeLength(const std::map<std::pair<int, int>, int>& dsrPath, int pkt) {           // R20
+  int n = 0;
+  for (const auto& kv : dsrPath) if (kv.first.first == pkt) ++n;
+  return n;
+}
+"
+`;
+
+exports[`CodeEmitter — full-file snapshots > mintroute/MintRoute.cc 1`] = `
+"#include "MintRoute.h"
+#include "inet/common/Protocol.h"
+
+Define_Module(MintRoute);
+
+static const Protocol mintrouteProtocol("mintroute", "MintRoute", Protocol::NetworkLayer);
+
+const Protocol& MintRoute::getProtocol() const { return mintrouteProtocol; }
+
+void MintRoute::initialize(int stage) { NetworkProtocolBase::initialize(stage); }
+void MintRoute::handleUpperPacket(Packet *packet) { /* M4-M6 event bodies: project Phase 4 */ }
+void MintRoute::handleLowerPacket(Packet *packet) { /* M4-M6 event bodies: project Phase 4 */ }
+"
+`;
+
+exports[`CodeEmitter — full-file snapshots > mintroute/MintRoute.h 1`] = `
+"#pragma once
+#include <map>
+#include <set>
+#include <utility>
+#include "eb_helpers.h"
+#include "inet/networklayer/base/NetworkProtocolBase.h"
+#include "inet/networklayer/contract/INetworkProtocol.h"
+
+using namespace inet;
+
+class MintRoute : public NetworkProtocolBase, public INetworkProtocol {
+ protected:
+  std::map<int, int> xmittedPkts;
+  std::map<int, int> middleware;
+  std::map<int, int> sinkBuff;
+  std::map<int, int> lostPkts;
+  std::set<std::pair<int,int>> ndBuff;
+  std::set<std::pair<int,int>> WiMedium;
+  std::map<int, int> sensingNDs;
+  std::map<int, int> sensedPkts;
+  std::map<int, int> floodedPkts;
+  std::map<int, std::set<int>> floodTbl;
+  std::map<int, std::set<int>> ctlNeighbours;
+  std::map<int, int> floodFlg;
+  std::set<std::pair<int,int>> recLostPkts;
+  std::map<int, int> senseBuff;
+  std::set<std::pair<int,int>> sentUp;
+  std::set<std::pair<int,int>> sentDown;
+  std::map<int, int> ctlSensedFlg;
+  std::map<int, int> dataSeqNo;
+  std::map<int, int> floodSeqNo;
+  std::map<int, int> nbHops;
+  std::map<int, int> pktSeqNo;
+  std::map<int, int> pktSrc;
+  std::map<int, int> pktFwdr;
+  std::map<int, int> pktData;
+  std::map<int, int> pktNbHops;
+  std::map<int, std::set<int>> wsnLinks;
+  std::set<std::pair<int,int>> channel;
+  std::map<int, std::set<int>> envNeighbours;
+  std::map<int, int> envSensedFlg;
+  std::map<int, int> envData;
+  std::map<int, int> vPktNbHops;
+  std::map<int, int> vPktSrc;
+  std::map<int, int> vPktSeqNo;
+  std::map<int, int> vPktFwdr;
+  std::map<int, int> vPktData;
+  std::map<int, int> crashedLinks;
+  std::map<int, int> totalSentBcon;
+  std::map<int, int> netSeqNo;
+  std::set<std::pair<int,int>> updateNbrs;
+  std::map<int, std::set<int>> neighbourTbl;
+  std::map<std::pair<int,int>, int> missed;
+  std::map<std::pair<int,int>, int> received;
+  std::map<std::pair<int,int>, int> lastSeqno;
+  std::map<std::pair<int,int>, int> receiveEst;
+  std::map<int, int> linkSeqNo;
+  std::map<int, int> estNDs;
+  std::map<int, int> estNbrs;
+  std::map<std::pair<int,int>, int> sentEst;
+  std::map<int, int> bcastRouTimer;
+  std::map<int, int> bcastRouNodes;
+  std::map<int, int> routeSeqNo;
+  std::map<std::pair<int,int>, int> liveliness;
+  std::map<int, int> checkedLiveNbrs;
+  std::map<int, int> chooseParentTimer;
+  std::map<int, int> nodes;
+  std::map<int, int> cRouteTree;
+  std::map<int, int> Nbrs;
+  std::map<int, int> completedRoute;
+  std::map<int, int> cpCost;
+  std::set<std::pair<int,int>> calPCostNDs;
+  std::map<std::pair<int,int>, int> calPCost;
+  std::map<int, int> vPktDestAddr;
+  std::map<int, int> calPCostFlg;
+  std::map<int, int> pktDestAddr;
+  std::map<std::pair<int,int>, int> parent;
+  std::map<std::pair<int,int>, int> cost;
+  std::map<int, int> deadNbrs;
+  std::map<int, int> chosenNDs;
+
+  // Protocol identity; defined in the .cc against a file-local Protocol.
+  const Protocol& getProtocol() const override;
+
+  void handleUpperPacket(Packet *packet) override;
+  void handleLowerPacket(Packet *packet) override;
+  void initialize(int stage) override;
+
+  // Lifecycle hooks are pure virtual in OperationalMixin; empty bodies keep the
+  // module concrete. Start/stop/crash logic is a project Phase 4 fill-in.
+  void handleStartOperation(LifecycleOperation *operation) override {}
+  void handleStopOperation(LifecycleOperation *operation) override {}
+  void handleCrashOperation(LifecycleOperation *operation) override {}
+};
+"
+`;
+
+exports[`CodeEmitter — full-file snapshots > mintroute/MintRoute.ned 1`] = `
+"import inet.networklayer.base.NetworkProtocolBase;
+import inet.networklayer.contract.INetworkProtocol;
+
+//
+// Generated network-layer protocol. Protocol-specific parameters are a project
+// Phase 4 fill-in.
+//
+simple MintRoute extends NetworkProtocolBase like INetworkProtocol
+{
+    parameters:
+        @class(MintRoute);
+        @display("i=block/fork");
+}
+"
+`;
+
+exports[`CodeEmitter — full-file snapshots > mintroute/omnetpp.ini 1`] = `
+"[General]
+network = WSN
+**.numHosts = 10
+**.host[*].networkLayer.typename = "MintRoute"
+"
+`;
+
+exports[`CodeEmitter — full-file snapshots > rtmcs/RTMCS.cc 1`] = `
+"#include "RTMCS.h"
+#include "inet/common/Protocol.h"
+
+Define_Module(RTMCS);
+
+static const Protocol rtmcsProtocol("rtmcs", "RTMCS", Protocol::NetworkLayer);
+
+const Protocol& RTMCS::getProtocol() const { return rtmcsProtocol; }
+
+void RTMCS::initialize(int stage) { NetworkProtocolBase::initialize(stage); }
+void RTMCS::handleUpperPacket(Packet *packet) { /* M4-M6 event bodies: project Phase 4 */ }
+void RTMCS::handleLowerPacket(Packet *packet) { /* M4-M6 event bodies: project Phase 4 */ }
+"
+`;
+
+exports[`CodeEmitter — full-file snapshots > rtmcs/RTMCS.h 1`] = `
+"#pragma once
+#include <map>
+#include <set>
+#include <utility>
+#include "eb_helpers.h"
+#include "inet/networklayer/base/NetworkProtocolBase.h"
+#include "inet/networklayer/contract/INetworkProtocol.h"
+
+using namespace inet;
+
+class RTMCS : public NetworkProtocolBase, public INetworkProtocol {
+ protected:
+  std::map<int, int> xmittedPkts;
+  std::map<int, int> middleware;
+  std::map<int, std::set<int>> destBuff;
+  std::map<int, int> finalDestAddr;
+  std::map<int, int> lostPkts;
+  std::set<std::pair<int,int>> ndBuff;
+  std::set<std::pair<int,int>> WiMedium;
+  std::map<int, int> sensingNDs;
+  std::map<int, int> sensedPkts;
+  std::map<int, int> floodedPkts;
+  std::map<int, std::set<int>> floodTbl;
+  std::map<int, std::set<int>> ctlNeighbours;
+  std::map<int, int> floodFlg;
+  std::set<std::pair<int,int>> recLostPkts;
+  std::map<int, int> envSensedFlg;
+  std::map<int, int> envData;
+  std::map<int, int> ctlSensedFlg;
+  std::map<int, int> senseBuff;
+  std::map<int, int> recvedData;
+  std::map<int, int> emergencyAlert;
+  std::map<int, int> pktData;
+  std::map<int, int> vPktData;
+  std::set<std::pair<int,int>> sentUp;
+  std::set<std::pair<int,int>> sentDown;
+  std::set<std::pair<int,int>> channel;
+  std::map<int, std::set<int>> envNeighbours;
+  std::map<int, std::set<int>> wsnLinks;
+  std::map<int, int> crashedLinks;
+  std::map<int, int> dataSeqNo;
+  std::map<int, int> floodSeqNo;
+  std::map<int, int> nbHops;
+  std::map<int, int> pktSeqNo;
+  std::map<int, int> pktSrc;
+  std::map<int, int> pktFwdr;
+  std::map<int, int> vPktNbHops;
+  std::map<int, int> vPktSrc;
+  std::map<int, int> pktNbHops;
+  std::map<int, int> vPktSeqNo;
+  std::map<int, int> vPktFwdr;
+  std::set<std::pair<int,int>> bwdRouteTbl;
+  std::map<std::pair<int,int>, int> bwdNextND;
+  std::map<std::pair<int,int>, int> bwdSeqNo;
+  std::map<std::pair<int,int>, int> bwdHopCnt;
+  std::map<int, int> netSeqNo;
+  std::map<int, int> linkSeqNo;
+  std::set<std::pair<int,int>> updateNbrs;
+  std::set<std::pair<int,int>> fwdRouteTbl;
+  std::map<std::pair<int,int>, int> fwdNextND;
+  std::map<std::pair<int,int>, int> fwdSeqNo;
+  std::map<std::pair<int,int>, int> fwdHopCnt;
+  std::set<std::pair<int,int>> rrepLists;
+  std::map<int, int> rrepSeqNo;
+  std::map<int, int> netDestAddr;
+  std::map<int, int> envDestAddr;
+  std::map<int, int> rrepFlg;
+  std::set<std::pair<int,int>> rrerLists;
+  std::map<int, int> pktErrND;
+  std::set<std::pair<int,int>> errND;
+  std::map<int, int> rrerFlg;
+
+  // Protocol identity; defined in the .cc against a file-local Protocol.
+  const Protocol& getProtocol() const override;
+
+  void handleUpperPacket(Packet *packet) override;
+  void handleLowerPacket(Packet *packet) override;
+  void initialize(int stage) override;
+
+  // Lifecycle hooks are pure virtual in OperationalMixin; empty bodies keep the
+  // module concrete. Start/stop/crash logic is a project Phase 4 fill-in.
+  void handleStartOperation(LifecycleOperation *operation) override {}
+  void handleStopOperation(LifecycleOperation *operation) override {}
+  void handleCrashOperation(LifecycleOperation *operation) override {}
+};
+"
+`;
+
+exports[`CodeEmitter — full-file snapshots > rtmcs/RTMCS.ned 1`] = `
+"import inet.networklayer.base.NetworkProtocolBase;
+import inet.networklayer.contract.INetworkProtocol;
+
+//
+// Generated network-layer protocol. Protocol-specific parameters are a project
+// Phase 4 fill-in.
+//
+simple RTMCS extends NetworkProtocolBase like INetworkProtocol
+{
+    parameters:
+        @class(RTMCS);
+        @display("i=block/fork");
+}
+"
+`;
+
+exports[`CodeEmitter — full-file snapshots > rtmcs/omnetpp.ini 1`] = `
+"[General]
+network = WSN
+**.numHosts = 10
+**.host[*].networkLayer.typename = "RTMCS"
+"
+`;
