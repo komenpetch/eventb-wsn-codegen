@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<org.eventb.core.contextFile org.eventb.core.configuration="org.eventb.core.fwd;org.eventb.codegen.ui.cgConfig" org.eventb.texttools.text_lastmodified="1421059368374" org.eventb.texttools.text_representation="context C4 extends C3&#10;constants  QThreshold Qlow Qmed Qhigh INFINITY&#10;&#10;axioms&#10;  @axm2_1 QThreshold ⊆  ℕ&#10;  @axm2_2 Qlow ∈ ℕ&#10;  @axm2_3 Qmed ∈ ℕ&#10;  @axm2_4 Qhigh ∈ ℕ&#10;  @axm2_5 QThreshold = {Qlow, Qmed, Qhigh}&#10;  @axm2_6 Qlow = 30&#10;  @axm2_7 Qmed = 50&#10;  @axm2_8 Qhigh = 80&#10;  @axm2_9 INFINITY = 9999&#10;end&#10;" version="3">
+<org.eventb.core.extendsContext name="'" org.eventb.core.target="C3"/>
+<org.eventb.core.constant name="_G2ftMJduEeS7UZUzQZNbaA" org.eventb.core.identifier="QThreshold"/>
+<org.eventb.core.constant name="_G2ftMZduEeS7UZUzQZNbaA" org.eventb.core.identifier="Qlow"/>
+<org.eventb.core.constant name="_G2ftMpduEeS7UZUzQZNbaA" org.eventb.core.identifier="Qmed"/>
+<org.eventb.core.constant name="_G2ftM5duEeS7UZUzQZNbaA" org.eventb.core.identifier="Qhigh"/>
+<org.eventb.core.constant name="_G2ftNJduEeS7UZUzQZNbaA" org.eventb.core.identifier="INFINITY"/>
+<org.eventb.core.axiom name="_G2ftNZduEeS7UZUzQZNbaA" org.eventb.core.label="axm2_1" org.eventb.core.predicate="QThreshold ⊆  ℕ"/>
+<org.eventb.core.axiom name="_G2ftNpduEeS7UZUzQZNbaA" org.eventb.core.label="axm2_2" org.eventb.core.predicate="Qlow ∈ ℕ"/>
+<org.eventb.core.axiom name="_G2ftN5duEeS7UZUzQZNbaA" org.eventb.core.label="axm2_3" org.eventb.core.predicate="Qmed ∈ ℕ"/>
+<org.eventb.core.axiom name="_G2ftOJduEeS7UZUzQZNbaA" org.eventb.core.label="axm2_4" org.eventb.core.predicate="Qhigh ∈ ℕ"/>
+<org.eventb.core.axiom name="_G2ftOZduEeS7UZUzQZNbaA" org.eventb.core.label="axm2_5" org.eventb.core.predicate="QThreshold = {Qlow, Qmed, Qhigh}"/>
+<org.eventb.core.axiom name="_G2ftOpduEeS7UZUzQZNbaA" org.eventb.core.label="axm2_6" org.eventb.core.predicate="Qlow = 30"/>
+<org.eventb.core.axiom name="_G2ftO5duEeS7UZUzQZNbaA" org.eventb.core.label="axm2_7" org.eventb.core.predicate="Qmed = 50"/>
+<org.eventb.core.axiom name="_G2ftPJduEeS7UZUzQZNbaA" org.eventb.core.label="axm2_8" org.eventb.core.predicate="Qhigh = 80"/>
+<org.eventb.core.axiom name="_G2ftPZduEeS7UZUzQZNbaA" org.eventb.core.label="axm2_9" org.eventb.core.predicate="INFINITY = 9999"/>
+</org.eventb.core.contextFile>

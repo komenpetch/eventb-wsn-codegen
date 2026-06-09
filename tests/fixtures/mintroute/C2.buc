@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<org.eventb.core.contextFile org.eventb.core.configuration="org.eventb.core.fwd;org.eventb.codegen.ui.cgConfig" org.eventb.texttools.text_lastmodified="1436958873417" org.eventb.texttools.text_representation="context C2 extends C1&#10;constants WSN  wsnTopology  randomFn minR maxR ctl_read ctl_tran ctl_rcvn ctl_write env_read env_rcvn env_write&#10;&#10;sets CTL_STATUS ENV_STATUS&#10;&#10;axioms&#10;@axm2_1 WSN = ND ↔ ND // a network topology&#10;@axm2_2  wsnTopology ∈ WSN&#10;@axm2_3 randomFn = minR‥maxR&#10; @axm2_4 minR = 1000&#10; @axm1_6 maxR = 1003&#10;  @axm1 partition(CTL_STATUS,  {ctl_read}, {ctl_tran}, {ctl_rcvn}, {ctl_write})&#10;  @axm2 partition(ENV_STATUS,  {env_read}, {env_rcvn}, {env_write})&#10;&#10;end" version="3">
+<org.eventb.core.extendsContext name="'" org.eventb.core.target="C1"/>
+<org.eventb.core.carrierSet name="_S4tXYJapEeSDW82aTOSJOQ" org.eventb.core.identifier="CTL_STATUS"/>
+<org.eventb.core.carrierSet name="_S4tXYZapEeSDW82aTOSJOQ" org.eventb.core.identifier="ENV_STATUS"/>
+<org.eventb.core.constant name="_S4tXYpapEeSDW82aTOSJOQ" org.eventb.core.identifier="WSN"/>
+<org.eventb.core.constant name="_S4tXY5apEeSDW82aTOSJOQ" org.eventb.core.identifier="wsnTopology"/>
+<org.eventb.core.constant name="_Oo5OcSraEeWeiYltIac5Bw" org.eventb.core.identifier="randomFn"/>
+<org.eventb.core.constant name="_Oo5OciraEeWeiYltIac5Bw" org.eventb.core.identifier="minR"/>
+<org.eventb.core.constant name="_Oo5OcyraEeWeiYltIac5Bw" org.eventb.core.identifier="maxR"/>
+<org.eventb.core.constant name="_S4tXZJapEeSDW82aTOSJOQ" org.eventb.core.identifier="ctl_read"/>
+<org.eventb.core.constant name="_S4tXZZapEeSDW82aTOSJOQ" org.eventb.core.identifier="ctl_tran"/>
+<org.eventb.core.constant name="_S4tXZpapEeSDW82aTOSJOQ" org.eventb.core.identifier="ctl_rcvn"/>
+<org.eventb.core.constant name="_S4tXZ5apEeSDW82aTOSJOQ" org.eventb.core.identifier="ctl_write"/>
+<org.eventb.core.constant name="_S4tXaJapEeSDW82aTOSJOQ" org.eventb.core.identifier="env_read"/>
+<org.eventb.core.constant name="_S4tXaZapEeSDW82aTOSJOQ" org.eventb.core.identifier="env_rcvn"/>
+<org.eventb.core.constant name="_S4tXapapEeSDW82aTOSJOQ" org.eventb.core.identifier="env_write"/>
+<org.eventb.core.axiom name="_S4tXa5apEeSDW82aTOSJOQ" org.eventb.core.comment="wireless sensor network structure" org.eventb.core.label="axm2_1" org.eventb.core.predicate="WSN = ND ↔ ND"/>
+<org.eventb.core.axiom name="_S4tXbJapEeSDW82aTOSJOQ" org.eventb.core.comment="wireless sensor network topology" org.eventb.core.label="axm2_2" org.eventb.core.predicate="wsnTopology ∈ WSN"/>
+<org.eventb.core.axiom name="_Qv9BkCraEeWeiYltIac5Bw" org.eventb.core.comment="basic random function for environment" org.eventb.core.label="axm2_3" org.eventb.core.predicate="randomFn = minR‥maxR"/>
+<org.eventb.core.axiom name="_Qv9BkSraEeWeiYltIac5Bw" org.eventb.core.comment="example of minimum random values" org.eventb.core.label="axm2_4" org.eventb.core.predicate="minR = 1000"/>
+<org.eventb.core.axiom name="_Qv9BkiraEeWeiYltIac5Bw" org.eventb.core.comment="example of maximum random values" org.eventb.core.label="axm2_5" org.eventb.core.predicate="maxR = 1003"/>
+<org.eventb.core.axiom name="_S4tXbZapEeSDW82aTOSJOQ" org.eventb.core.label="axm1" org.eventb.core.predicate="partition(CTL_STATUS,  {ctl_read}, {ctl_tran}, {ctl_rcvn}, {ctl_write})"/>
+<org.eventb.core.axiom name="_S4tXbpapEeSDW82aTOSJOQ" org.eventb.core.label="axm2" org.eventb.core.predicate="partition(ENV_STATUS,  {env_read}, {env_rcvn}, {env_write})"/>
+</org.eventb.core.contextFile>

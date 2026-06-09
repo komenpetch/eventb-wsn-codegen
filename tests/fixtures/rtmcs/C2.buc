@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<org.eventb.core.contextFile org.eventb.core.configuration="org.eventb.core.fwd;org.eventb.codegen.ui.cgConfig" org.eventb.texttools.text_lastmodified="1438253294669" org.eventb.texttools.text_representation="context C2 extends C1&#10;&#10;constants Sink Actuators safetyThreshold  randomFn minR maxR&#10;&#10;axioms&#10;  @axm2_1 Sink ∈ Destination&#10;  @axm2_2 Actuators ⊆ Destination&#10;  @axm2_3 partition(Destination, {Sink}, Actuators) // destination is partitioned into two types: a sink and actuators&#10;  @axm2_4 safetyThreshold ∈ ℤ // constants for safety threshold&#10;  @axm2_5 safetyThreshold = 1001&#10;  @axm2_6 randomFn = minR‥maxR // basic random function for environment&#10;  @axm2_7 minR = 1000&#10;  @axm2_8 maxR = 1003&#10;end&#10;" version="3">
+<org.eventb.core.extendsContext name="_g2g10CPREeWw7avYyJIc7Q" org.eventb.core.target="C1"/>
+<org.eventb.core.constant name="_g2m8cCPREeWw7avYyJIc7Q" org.eventb.core.identifier="Sink"/>
+<org.eventb.core.constant name="_g2m8cSPREeWw7avYyJIc7Q" org.eventb.core.identifier="Actuators"/>
+<org.eventb.core.axiom name="_kTG4gCPREeWw7avYyJIc7Q" org.eventb.core.label="axm2_1" org.eventb.core.predicate="Sink ∈ Destination"/>
+<org.eventb.core.axiom name="_kTG4gSPREeWw7avYyJIc7Q" org.eventb.core.label="axm2_2" org.eventb.core.predicate="Actuators ⊆ Destination"/>
+<org.eventb.core.axiom name="_kTG4giPREeWw7avYyJIc7Q" org.eventb.core.comment="destination is partitioned into two types: a sink and actuators" org.eventb.core.label="axm2_3" org.eventb.core.predicate="partition(Destination, {Sink}, Actuators)"/>
+<org.eventb.core.constant name="_KURigCPSEeWw7avYyJIc7Q" org.eventb.core.identifier="safetyThreshold"/>
+<org.eventb.core.axiom name="_kTG4giPREeWw7avYyJIc7R" org.eventb.core.comment="constants for safety threshold" org.eventb.core.label="axm2_4" org.eventb.core.predicate="safetyThreshold ∈ ℤ"/>
+<org.eventb.core.axiom name="_KURigSPSEeWw7avYyJIc7Q" org.eventb.core.label="axm2_5" org.eventb.core.predicate="safetyThreshold = 1001"/>
+<org.eventb.core.constant name="_GQNrsTagEeWwIdsEsbut7Q" org.eventb.core.identifier="randomFn"/>
+<org.eventb.core.constant name="_GQNrsjagEeWwIdsEsbut7Q" org.eventb.core.identifier="minR"/>
+<org.eventb.core.constant name="_GQNrszagEeWwIdsEsbut7Q" org.eventb.core.identifier="maxR"/>
+<org.eventb.core.axiom name="_GQOSwDagEeWwIdsEsbut7Q" org.eventb.core.comment="basic random function for environment" org.eventb.core.label="axm2_6" org.eventb.core.predicate="randomFn = minR‥maxR"/>
+<org.eventb.core.axiom name="_GQOSwTagEeWwIdsEsbut7Q" org.eventb.core.label="axm2_7" org.eventb.core.predicate="minR = 1000"/>
+<org.eventb.core.axiom name="_GQOSwjagEeWwIdsEsbut7Q" org.eventb.core.label="axm2_8" org.eventb.core.predicate="maxR = 1003"/>
+</org.eventb.core.contextFile>

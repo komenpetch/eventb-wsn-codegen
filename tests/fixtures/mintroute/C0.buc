@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<org.eventb.core.contextFile org.eventb.core.configuration="org.eventb.core.fwd;org.eventb.codegen.ui.cgConfig" org.eventb.texttools.text_lastmodified="1569659830116" org.eventb.texttools.text_representation="context C0&#10;&#10;sets PKT&#10;constants Sink ND BROADCAST initialSrcAddr&#10;axioms&#10;  @axm0_1 ND ⊆ ℕ // set of nodes in the network&#10;  @axm0_2 finite(ND) // nodes should be finite&#10;  @axm0_3 Sink ∈ ND  // a sink node should be a member in set of nodes&#10;  @axm0_6 finite(PKT)// set of packets should be finite&#10;  @axm0_7 initialSrcAddr ∈PKT → ND // a packet structure: source of packet&#10;  @axm0_8 BROADCAST = −1 //broadcast constant&#10;end" version="3">
+<org.eventb.core.carrierSet name="_HzqVMJZfEeSDW82aTOSJOQ" org.eventb.core.identifier="PKT"/>
+<org.eventb.core.constant name="_HzqVMZZfEeSDW82aTOSJOQ" org.eventb.core.identifier="Sink"/>
+<org.eventb.core.constant name="_HzqVMpZfEeSDW82aTOSJOQ" org.eventb.core.identifier="ND"/>
+<org.eventb.core.constant name="_HzqVM5ZfEeSDW82aTOSJOQ" org.eventb.core.identifier="BROADCAST"/>
+<org.eventb.core.constant name="_HzqVNJZfEeSDW82aTOSJOQ" org.eventb.core.identifier="initialSrcAddr"/>
+<org.eventb.core.axiom name="_HzqVNpZfEeSDW82aTOSJOQ" org.eventb.core.comment="set of nodes in the network" org.eventb.core.label="axm0_1" org.eventb.core.predicate="ND ⊆ ℕ"/>
+<org.eventb.core.axiom name="_HzqVN5ZfEeSDW82aTOSJOQ" org.eventb.core.comment="nodes should be finite" org.eventb.core.label="axm0_2" org.eventb.core.predicate="finite(ND)"/>
+<org.eventb.core.axiom name="_HzqVOJZfEeSDW82aTOSJOQ" org.eventb.core.comment="a sink node should be a member in set of nodes" org.eventb.core.label="axm0_3" org.eventb.core.predicate="Sink ∈ ND"/>
+<org.eventb.core.axiom name="_HzqVOZZfEeSDW82aTOSJOQ" org.eventb.core.comment="set of packets should be finite" org.eventb.core.label="axm0_6" org.eventb.core.predicate="finite(PKT)"/>
+<org.eventb.core.axiom name="_HzqVOpZfEeSDW82aTOSJOQ" org.eventb.core.comment="a packet structure: source of packet" org.eventb.core.label="axm0_7" org.eventb.core.predicate="initialSrcAddr ∈PKT → ND"/>
+<org.eventb.core.axiom name="_gb2TsSrPEeW6qJRmDDvyhA" org.eventb.core.comment="broadcast constant" org.eventb.core.label="axm0_8" org.eventb.core.predicate="BROADCAST = −1"/>
+</org.eventb.core.contextFile>

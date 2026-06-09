@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<org.eventb.core.machineFile org.eventb.core.configuration="org.eventb.core.fwd;org.eventb.codegen.ui.cgConfig" org.eventb.texttools.text_lastmodified="1438245976791" org.eventb.texttools.text_representation="machine M2 refines M1  sees C2&#10;&#10;variables destBuff // nodes' receiving buffer&#10;          finalDestAddr // (ctl) final dest address&#10;          ndBuff // nodes' waiting buffer --------------------- var of M2&#10;          WiMedium // wireless medium&#10;          sensingNDs // (ctl)sensing nodes&#10;          sensedPkts // (ctl)sensed packets&#10;          floodedPkts // (ctl)flooded packets&#10;          floodTbl // for detect duplicated packets&#10;          ctlNeighbours // (ctl) neighbour lists&#10;          recLostPkts // record recLostPkts packet at each node&#10;          floodFlg // flood flag&#10;          envSensedFlg // (env) sensing period--------------------- var of M3&#10;          envData // (env) environmental/conditional data&#10;          ctlSensedFlg // (ctl)sensing period&#10;          senseBuff // (ctl) sense ndBuff&#10;          recvedData // (ctl) received data&#10;          emergencyAlert // (ctl) actuating status&#10;          pktData // (ctl) data attached in transmitted packet&#10;          vPktData // (env) virtual packet at channel&#10;&#10;&#10;invariants&#10;  @inv2_1 envSensedFlg ∈ND ∖Destination → BOOL&#10;  @inv2_2 envData ∈ ND ∖Destination → ℤ&#10;  @inv2_3 ctlSensedFlg ∈ ND ∖Destination →BOOL&#10;  @inv2_4 senseBuff ∈ ND ∖Destination  → ℙ(ℤ)&#10;  @inv2_5 recvedData ∈ Destination → ℙ(ℤ)&#10;  @inv2_6 emergencyAlert ∈ Actuators → BOOL&#10;  @inv2_7 pktData ∈  PKT  ⇸ ℤ&#10;  @inv2_8 vPktData ∈  PKT   ⇸ ℤ&#10;&#10;events&#10;  event INITIALISATION extends INITIALISATION&#10;    then&#10;      @int2_1 envSensedFlg ≔ (ND ∖Destination) × {FALSE}&#10;      @int2_2 envData ≔ (ND ∖Destination) × {0}&#10;      @int2_3 ctlSensedFlg ≔ (ND ∖Destination) × {FALSE}&#10;      @int2_4 senseBuff ≔  (ND ∖Destination) × {∅}&#10;      @int2_5 recvedData ≔ Destination × {∅}&#10;      @int2_6 emergencyAlert ≔  Actuators × {FALSE}&#10;      @int2_7 pktData ≔ ∅&#10;      @int2_8 vPktData ≔ ∅&#10;  end&#10;&#10;  event start_sensing&#10;    any x sd&#10;    where&#10;      @g1 x ∈ ND ∖Destination&#10;      @g2 envSensedFlg(x) = FALSE&#10;      @g3 sd ∈ randomFn&#10;    then&#10;      @a1 envSensedFlg(x) ≔ TRUE&#10;      @a2 envData(x) ≔ sd&#10;  end&#10;&#10;  event sensing&#10;    any x sf sd&#10;    where&#10;      @g1 x ∈ ND ∖Destination&#10;      @g2 sf = envSensedFlg(x)&#10;      @g3 envSensedFlg(x) = TRUE&#10;      @g4 ctlSensedFlg(x) = FALSE&#10;      @g5 sd = envData(x)&#10;    then&#10;      @a1 ctlSensedFlg(x) ≔ sf&#10;      @a2 senseBuff(x) ≔  senseBuff(x) ∪ {sd}&#10;  end&#10;&#10;  event finish_sensing extends clear_sensingNDs&#10;    where&#10;      @g2 x ∈ dom(envSensedFlg)&#10;      @g3 envSensedFlg(x) = TRUE&#10;      @g4 ctlSensedFlg(x) = TRUE&#10;    then&#10;      @a2 ctlSensedFlg(x) ≔ FALSE&#10;      @a3 envSensedFlg(x) ≔ FALSE // @a3 sensingNDs ≔ ∅&#10;  end&#10;&#10;  event create_dataPkt // (ctl)  create a  data packet&#10;  extends create_dataPkt&#10;    any data&#10;    where&#10;      @g10 ctlSensedFlg(s) = TRUE&#10;      @g11 s ∈ dom(senseBuff) ∧ senseBuff ≠ ∅ ∧ data ∈ senseBuff(s)&#10;      @g12 pkt  ∉ dom(pktData)&#10;    then&#10;      @a6 senseBuff(s) ≔  senseBuff(s) ∖{data}&#10;      @a7 pktData ≔ pktData  ∪ {pkt ↦ data}&#10;  end&#10;&#10;  event start_flooding // (ctl) start flooding&#10;  extends start_flooding&#10;  end&#10;&#10;  event reset_flooding extends reset_flooding&#10;  end&#10;&#10;  event create_floodPkt // (ctl)  create a packet&#10;  extends create_floodPkt&#10;    where&#10;      @g11 pkt ∉ dom(pktData)&#10;    then&#10;      @a5 pktData ≔ pktData ∪ {pkt ↦0}&#10;  end&#10;&#10;  event lose_pkt extends lose_pkt&#10;  end&#10;&#10;  event start_tx // (ctl) starting transmiting a packet to WiMedium&#10;  extends start_tx&#10;  end&#10;&#10;  event assign_vPktData&#10;    any pkt data&#10;    where&#10;      @g1 pkt ∉ dom(vPktData)&#10;      @g2 pkt ∈ dom(pktData) ∧ data = pktData(pkt)&#10;    then&#10;      @a1 vPktData ≔ vPktData ∪ {pkt   ↦ data}&#10;      @a2 pktData ≔  {pkt} ⩤ pktData&#10;  end&#10;&#10;  event indicate_neighbours // (env) channel sends the neighbour information&#10;  extends indicate_neighbours&#10;    any data&#10;    where&#10;      @g13 pkt ∈ dom(vPktData) ∧ data = vPktData(pkt)&#10;      @g20 pkt ∉ dom(pktData)&#10;    then&#10;      @a14 vPktData ≔  {pkt} ⩤ vPktData&#10;      @a9 pktData ≔ pktData ∪ {pkt   ↦ data}&#10;  end&#10;&#10;  event receive_pkt extends receive_pkt&#10;  end&#10;&#10;  event receive_dup_pkt extends receive_dup_pkt&#10;  end&#10;&#10;  event dest_recv_dataPkt // (ctl) Destination receives a packet&#10;  extends dest_recv_pkt&#10;    any data&#10;    where&#10;      @g9 des ∈ dom(recvedData)&#10;      @g10 pkt ∈ dom(pktData) ∧ data = pktData(pkt)&#10;      @g11 type(pkt) = DATA&#10;    then&#10;      @a4 recvedData(des) ≔ recvedData(des) ∪ {data}&#10;  end&#10;&#10;  event dest_recv_fldpkt // (ctl) Destination receives a packet&#10;  extends dest_recv_pkt&#10;    where&#10;      @g9 type(pkt)∈ CONTROL&#10;  end&#10;&#10;  event activating&#10;    any act data&#10;    where&#10;      @g1 act ∈ Actuators&#10;      @g2 act ∈ dom(recvedData)&#10;      @g3 data ∈recvedData(act)&#10;      @g4 data ≥ safetyThreshold&#10;      @g5 emergencyAlert(act) = FALSE&#10;    then&#10;      @a1 recvedData(act) ≔ recvedData(act) ∖ {data}&#10;      @a2 emergencyAlert(act) ≔ TRUE&#10;  end&#10;&#10;  event no_activating&#10;    any act data&#10;    where&#10;      @g1 act ∈ Actuators&#10;      @g2 act ∈ dom(recvedData)&#10;      @g3 data ∈ recvedData(act)&#10;      @g4 data &lt; safetyThreshold&#10;    then&#10;      @a1 recvedData(act) ≔ recvedData(act) ∖ {data}&#10;  end&#10;&#10;  event reset_activatingStatus&#10;    any act&#10;    where&#10;      @g1 act ∈ dom(emergencyAlert)&#10;      @g2 emergencyAlert(act) = TRUE&#10;    then&#10;      @a1 emergencyAlert(act) ≔  FALSE&#10;  end&#10;&#10;  event finish_tx_pkt // (ctl) removes packet from network for transit tx&#10;  extends finish_tx_pkt&#10;  end&#10;&#10;  event final_tx_pkt // (ctl) remove data packet from network indicating completion of tx&#10;  extends final_tx_pkt&#10;  end&#10;&#10;  event clear_pkt extends clear_pkt&#10;    where&#10;      @g3 pkt ∈ dom(pktData)&#10;    then&#10;      @a2 pktData ≔  {pkt} ⩤ pktData&#10;  end&#10;end&#10;" version="5">
+<org.eventb.core.refinesMachine name="'" org.eventb.core.target="M1"/>
+<org.eventb.core.seesContext name="_luYjsCPREeWw7avYyJIc7Q" org.eventb.core.target="C2"/>
+<org.eventb.core.variable name="_JKtQMCPDEeWw7avYyJIc7Q" org.eventb.core.comment="nodes' receiving buffer" org.eventb.core.identifier="destBuff"/>
+<org.eventb.core.variable name="_JKtQMSPDEeWw7avYyJIc7Q" org.eventb.core.comment="final destination address" org.eventb.core.identifier="finalDestAddr"/>
+<org.eventb.core.variable name="_JKtQMiPDEeWw7avYyJIc7Q" org.eventb.core.comment="nodes' waiting buffer" org.eventb.core.identifier="ndBuff"/>
+<org.eventb.core.variable name="_xTHlcCPBEeWw7avYyJIc7Q" org.eventb.core.comment="wireless medium" org.eventb.core.identifier="WiMedium"/>
+<org.eventb.core.variable name="_xTHlcSPBEeWw7avYyJIc7Q" org.eventb.core.comment="sensing nodes" org.eventb.core.identifier="sensingNDs"/>
+<org.eventb.core.variable name="_xTHlciPBEeWw7avYyJIc7Q" org.eventb.core.comment="sensed packets" org.eventb.core.identifier="sensedPkts"/>
+<org.eventb.core.variable name="_xTHlcyPBEeWw7avYyJIc7Q" org.eventb.core.comment="flooded packets" org.eventb.core.identifier="floodedPkts"/>
+<org.eventb.core.variable name="_xTHldCPBEeWw7avYyJIc7Q" org.eventb.core.comment="historical received packets used for detect duplicated packets" org.eventb.core.identifier="floodTbl"/>
+<org.eventb.core.variable name="_xTHldSPBEeWw7avYyJIc7Q" org.eventb.core.comment="neighbour lists " org.eventb.core.identifier="ctlNeighbours"/>
+<org.eventb.core.variable name="_rlzdVyPBEeWw7avYyJIc7Q" org.eventb.core.comment="recorded lost packet packet at each node" org.eventb.core.identifier="recLostPkts"/>
+<org.eventb.core.event name="_xTHljCPBEeWw7avYyJIc7R" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="INITIALISATION">
+<org.eventb.core.action name="_xAtfcCPEEeWw7avYyJIc7Q" org.eventb.core.assignment="envSensedFlg ≔ (ND ∖Destination) × {FALSE}" org.eventb.core.label="int2_1"/>
+<org.eventb.core.action name="_xAtfcSPEEeWw7avYyJIc7Q" org.eventb.core.assignment="envData ≔ (ND ∖Destination) × {0}" org.eventb.core.label="int2_2"/>
+<org.eventb.core.action name="_xAtfciPEEeWw7avYyJIc7Q" org.eventb.core.assignment="ctlSensedFlg ≔ (ND ∖Destination) × {FALSE}" org.eventb.core.label="int2_3"/>
+<org.eventb.core.action name="_xAtfcyPEEeWw7avYyJIc7Q" org.eventb.core.assignment="senseBuff ≔  (ND ∖Destination) × {∅}" org.eventb.core.label="int2_4"/>
+<org.eventb.core.action name="_huYcgCPSEeWw7avYyJIc7Q" org.eventb.core.assignment="recvedData ≔ Destination × {∅}" org.eventb.core.label="int2_5"/>
+<org.eventb.core.action name="_huYcgSPSEeWw7avYyJIc7Q" org.eventb.core.assignment="emergencyAlert ≔  Actuators × {FALSE}" org.eventb.core.label="int2_6"/>
+<org.eventb.core.action name="_huYcgiPSEeWw7avYyJIc7Q" org.eventb.core.assignment="pktData ≔ ∅" org.eventb.core.label="int2_7"/>
+<org.eventb.core.action name="_Ea0I4CPfEeWw7avYyJIc7Q" org.eventb.core.assignment="vPktData ≔ ∅" org.eventb.core.label="int2_8"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xAzmGCPEEeWw7avYyJIc7Q" org.eventb.core.comment="activating each node to sense data" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="start_sensing">
+<org.eventb.core.parameter name="_xAzmGSPEEeWw7avYyJIc7Q" org.eventb.core.identifier="x"/>
+<org.eventb.core.parameter name="_xAzmGiPEEeWw7avYyJIc7Q" org.eventb.core.identifier="sd"/>
+<org.eventb.core.guard name="_xAzmGyPEEeWw7avYyJIc7Q" org.eventb.core.label="g1" org.eventb.core.predicate="x ∈ ND ∖Destination"/>
+<org.eventb.core.guard name="_xAzmHCPEEeWw7avYyJIc7Q" org.eventb.core.label="g2" org.eventb.core.predicate="envSensedFlg(x) = FALSE"/>
+<org.eventb.core.guard name="_xAzmHSPEEeWw7avYyJIc7Q" org.eventb.core.label="g3" org.eventb.core.predicate="sd ∈ randomFn"/>
+<org.eventb.core.action name="_xAzmHiPEEeWw7avYyJIc7Q" org.eventb.core.assignment="envSensedFlg(x) ≔ TRUE" org.eventb.core.label="a1"/>
+<org.eventb.core.action name="_xAzmHyPEEeWw7avYyJIc7Q" org.eventb.core.assignment="envData(x) ≔ sd" org.eventb.core.label="a2"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xAzmICPEEeWw7avYyJIc7Q" org.eventb.core.comment="each node sense a data from environment" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="sensing">
+<org.eventb.core.parameter name="_xAzmISPEEeWw7avYyJIc7Q" org.eventb.core.identifier="x"/>
+<org.eventb.core.parameter name="_xAzmIiPEEeWw7avYyJIc7Q" org.eventb.core.identifier="sf"/>
+<org.eventb.core.parameter name="_xAzmIyPEEeWw7avYyJIc7Q" org.eventb.core.identifier="sd"/>
+<org.eventb.core.guard name="_xAzmJCPEEeWw7avYyJIc7Q" org.eventb.core.label="g1" org.eventb.core.predicate="x ∈ ND ∖Destination"/>
+<org.eventb.core.guard name="_xAzmJSPEEeWw7avYyJIc7Q" org.eventb.core.label="g2" org.eventb.core.predicate="sf = envSensedFlg(x)"/>
+<org.eventb.core.guard name="_xA5ssCPEEeWw7avYyJIc7Q" org.eventb.core.label="g3" org.eventb.core.predicate="envSensedFlg(x) = TRUE"/>
+<org.eventb.core.guard name="_xA5ssSPEEeWw7avYyJIc7Q" org.eventb.core.label="g4" org.eventb.core.predicate="ctlSensedFlg(x) = FALSE"/>
+<org.eventb.core.guard name="_xA5ssiPEEeWw7avYyJIc7Q" org.eventb.core.label="g5" org.eventb.core.predicate="sd = envData(x)"/>
+<org.eventb.core.action name="_xA5ssyPEEeWw7avYyJIc7Q" org.eventb.core.assignment="ctlSensedFlg(x) ≔ sf" org.eventb.core.label="a1"/>
+<org.eventb.core.action name="_xA5stCPEEeWw7avYyJIc7Q" org.eventb.core.assignment="senseBuff(x) ≔  senseBuff(x) ∪ {sd}" org.eventb.core.label="a2"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xA5stSPEEeWw7avYyJIc7Q" org.eventb.core.comment="finishing sensing data process" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="finish_sensing">
+<org.eventb.core.refinesEvent name="_xA5stiPEEeWw7avYyJIc7Q" org.eventb.core.target="clear_sensingNDs"/>
+<org.eventb.core.guard name="_xA5suCPEEeWw7avYyJIc7Q" org.eventb.core.label="g2" org.eventb.core.predicate="x ∈ dom(envSensedFlg)"/>
+<org.eventb.core.guard name="_xA5suSPEEeWw7avYyJIc7Q" org.eventb.core.label="g3" org.eventb.core.predicate="envSensedFlg(x) = TRUE"/>
+<org.eventb.core.guard name="_xA5suiPEEeWw7avYyJIc7Q" org.eventb.core.label="g4" org.eventb.core.predicate="ctlSensedFlg(x) = TRUE"/>
+<org.eventb.core.action name="_xA5suyPEEeWw7avYyJIc7Q" org.eventb.core.assignment="ctlSensedFlg(x) ≔ FALSE" org.eventb.core.label="a2"/>
+<org.eventb.core.action name="_xA5svCPEEeWw7avYyJIc7Q" org.eventb.core.assignment="envSensedFlg(x) ≔ FALSE" org.eventb.core.comment="@a3 sensingNDs ≔ ∅" org.eventb.core.label="a3"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xTHljCPBEeWw7avYyJIc7S" org.eventb.core.comment="creating a  data packet" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="create_dataPkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="create_dataPkt"/>
+<org.eventb.core.parameter name="_KiN34CPSEeWw7avYyJIc7Q" org.eventb.core.identifier="data"/>
+<org.eventb.core.guard name="_KiN34SPSEeWw7avYyJIc7Q" org.eventb.core.label="g10" org.eventb.core.predicate="ctlSensedFlg(s) = TRUE"/>
+<org.eventb.core.guard name="_KiN34iPSEeWw7avYyJIc7Q" org.eventb.core.label="g11" org.eventb.core.predicate="s ∈ dom(senseBuff) ∧ senseBuff ≠ ∅ ∧ data ∈ senseBuff(s)"/>
+<org.eventb.core.guard name="_KiT-gCPSEeWw7avYyJIc7Q" org.eventb.core.label="g12" org.eventb.core.predicate="pkt  ∉ dom(pktData)"/>
+<org.eventb.core.action name="_KiT-gSPSEeWw7avYyJIc7Q" org.eventb.core.assignment="senseBuff(s) ≔  senseBuff(s) ∖{data}" org.eventb.core.label="a6"/>
+<org.eventb.core.action name="_KiT-giPSEeWw7avYyJIc7Q" org.eventb.core.assignment="pktData ≔ pktData  ∪ {pkt ↦ data}" org.eventb.core.label="a7"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xTHljCPBEeWw7avYyJIc7U" org.eventb.core.comment="initiating flooding a control packet" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="start_flooding">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="start_flooding"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xTHljCPBEeWw7avYyJIc7V" org.eventb.core.comment="resetting flood flag" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="reset_flooding">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="reset_flooding"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xTHljCPBEeWw7avYyJIc7W" org.eventb.core.comment="create a control packet" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="create_controlPkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="create_controlPkt"/>
+<org.eventb.core.guard name="_bDNg0SPZEeWw7avYyJIc7Q" org.eventb.core.label="g11" org.eventb.core.predicate="pkt ∉ dom(pktData)"/>
+<org.eventb.core.action name="_bDNg0iPZEeWw7avYyJIc7Q" org.eventb.core.assignment="pktData ≔ pktData ∪ {pkt ↦0}" org.eventb.core.label="a5"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xTHljCPBEeWw7avYyJIc7Y" org.eventb.core.comment="starting transmiting a packet to wireless medium" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="start_tx">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="start_tx"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_VJ7xkCPfEeWw7avYyJIc7Q" org.eventb.core.comment="assigning virtual data packet" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="assign_vPktData">
+<org.eventb.core.parameter name="_VJ7xkSPfEeWw7avYyJIc7Q" org.eventb.core.identifier="pkt"/>
+<org.eventb.core.parameter name="_VJ7xkiPfEeWw7avYyJIc7Q" org.eventb.core.identifier="data"/>
+<org.eventb.core.guard name="_VJ7xkyPfEeWw7avYyJIc7Q" org.eventb.core.label="g1" org.eventb.core.predicate="pkt ∉ dom(vPktData)"/>
+<org.eventb.core.guard name="_VJ7xlCPfEeWw7avYyJIc7Q" org.eventb.core.label="g2" org.eventb.core.predicate="pkt ∈ dom(pktData) ∧ data = pktData(pkt)"/>
+<org.eventb.core.action name="_VJ7xlSPfEeWw7avYyJIc7Q" org.eventb.core.assignment="vPktData ≔ vPktData ∪ {pkt   ↦ data}" org.eventb.core.label="a1"/>
+<org.eventb.core.action name="_VJ7xliPfEeWw7avYyJIc7Q" org.eventb.core.assignment="pktData ≔  {pkt} ⩤ pktData" org.eventb.core.label="a2"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xTHljCPBEeWw7avYyJIc7Z" org.eventb.core.comment="channel indicates the neighbour of a forwarder" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="indicate_neighbours">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="indicate_neighbours"/>
+<org.eventb.core.parameter name="_Ea62kSPfEeWw7avYyJIc7Q" org.eventb.core.identifier="data"/>
+<org.eventb.core.guard name="_Ea7doCPfEeWw7avYyJIc7Q" org.eventb.core.label="g6" org.eventb.core.predicate="pkt ∈ dom(vPktData) ∧ data = vPktData(pkt)"/>
+<org.eventb.core.guard name="_Ea7doSPfEeWw7avYyJIc7Q" org.eventb.core.label="g7" org.eventb.core.predicate="pkt ∉ dom(pktData)"/>
+<org.eventb.core.action name="_Ea7doiPfEeWw7avYyJIc7Q" org.eventb.core.assignment="vPktData ≔  {pkt} ⩤ vPktData" org.eventb.core.label="a6"/>
+<org.eventb.core.action name="_Ea7doyPfEeWw7avYyJIc7Q" org.eventb.core.assignment="pktData ≔ pktData ∪ {pkt   ↦ data}" org.eventb.core.label="a7"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_iFfagCQKEeWw7avYyJIc7Q" org.eventb.core.comment="each neighbour node receives a transmitted packet" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="receive_pkt">
+<org.eventb.core.refinesEvent name="_iFfagSQKEeWw7avYyJIc7Q" org.eventb.core.target="receive_pkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_iFfagiQKEeWw7avYyJIc7Q" org.eventb.core.comment="each neighbour node discards a duplicated packet" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="receive_dup_pkt">
+<org.eventb.core.refinesEvent name="_iFfagyQKEeWw7avYyJIc7Q" org.eventb.core.target="receive_dup_pkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_Cj3TsCPyEeWw7avYyJIc7Q" org.eventb.core.comment="destination receives a data packet" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="dest_recv_dataPkt">
+<org.eventb.core.refinesEvent name="_Cj36wCPyEeWw7avYyJIc7Q" org.eventb.core.target="dest_recv_pkt"/>
+<org.eventb.core.parameter name="_Cj36wSPyEeWw7avYyJIc7Q" org.eventb.core.identifier="data"/>
+<org.eventb.core.guard name="_Cj36wiPyEeWw7avYyJIc7Q" org.eventb.core.label="g9" org.eventb.core.predicate="des ∈ dom(recvedData)"/>
+<org.eventb.core.guard name="_Cj36wyPyEeWw7avYyJIc7Q" org.eventb.core.label="g10" org.eventb.core.predicate="pkt ∈ dom(pktData) ∧ data = pktData(pkt)"/>
+<org.eventb.core.guard name="_Cj36xCPyEeWw7avYyJIc7Q" org.eventb.core.label="g11" org.eventb.core.predicate="type(pkt) = DATA"/>
+<org.eventb.core.action name="_Cj4h0CPyEeWw7avYyJIc7Q" org.eventb.core.assignment="recvedData(des) ≔ recvedData(des) ∪ {data}" org.eventb.core.label="a4"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_Cj4h0SPyEeWw7avYyJIc7Q" org.eventb.core.comment="destination receives a control packet" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="dest_recv_controlPkt">
+<org.eventb.core.refinesEvent name="_Cj4h0iPyEeWw7avYyJIc7Q" org.eventb.core.target="dest_recv_pkt"/>
+<org.eventb.core.guard name="_Cj4h0yPyEeWw7avYyJIc7Q" org.eventb.core.label="g9" org.eventb.core.predicate="type(pkt)∈ CONTROL"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_KiaFICPSEeWw7avYyJIc7Q" org.eventb.core.comment="alerting emergency: sensed data is above safety threshold" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="actuating">
+<org.eventb.core.parameter name="_KiaFISPSEeWw7avYyJIc7Q" org.eventb.core.identifier="act"/>
+<org.eventb.core.parameter name="_KiaFIiPSEeWw7avYyJIc7Q" org.eventb.core.identifier="data"/>
+<org.eventb.core.guard name="_KiaFIyPSEeWw7avYyJIc7Q" org.eventb.core.label="g1" org.eventb.core.predicate="act ∈ Actuators"/>
+<org.eventb.core.guard name="_KiaFJCPSEeWw7avYyJIc7Q" org.eventb.core.label="g2" org.eventb.core.predicate="act ∈ dom(recvedData)"/>
+<org.eventb.core.guard name="_KiaFJSPSEeWw7avYyJIc7Q" org.eventb.core.label="g3" org.eventb.core.predicate="data ∈recvedData(act)"/>
+<org.eventb.core.guard name="_KiaFJiPSEeWw7avYyJIc7Q" org.eventb.core.label="g4" org.eventb.core.predicate="data ≥ safetyThreshold"/>
+<org.eventb.core.guard name="_KiaFJyPSEeWw7avYyJIc7Q" org.eventb.core.label="g5" org.eventb.core.predicate="emergencyAlert(act) = FALSE"/>
+<org.eventb.core.action name="_KiaFKCPSEeWw7avYyJIc7Q" org.eventb.core.assignment="recvedData(act) ≔ recvedData(act) ∖ {data}" org.eventb.core.label="a1"/>
+<org.eventb.core.action name="_KiaFKSPSEeWw7avYyJIc7Q" org.eventb.core.assignment="emergencyAlert(act) ≔ TRUE" org.eventb.core.label="a2"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_KiaFKiPSEeWw7avYyJIc7Q" org.eventb.core.comment="not alerting emergency sensed data is below safety threshold " org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="no_actuating">
+<org.eventb.core.parameter name="_KiaFKyPSEeWw7avYyJIc7Q" org.eventb.core.identifier="act"/>
+<org.eventb.core.parameter name="_KiaFLCPSEeWw7avYyJIc7Q" org.eventb.core.identifier="data"/>
+<org.eventb.core.guard name="_KiaFLSPSEeWw7avYyJIc7Q" org.eventb.core.label="g1" org.eventb.core.predicate="act ∈ Actuators"/>
+<org.eventb.core.guard name="_KiaFLiPSEeWw7avYyJIc7Q" org.eventb.core.label="g2" org.eventb.core.predicate="act ∈ dom(recvedData)"/>
+<org.eventb.core.guard name="_KiaFLyPSEeWw7avYyJIc7Q" org.eventb.core.label="g3" org.eventb.core.predicate="data ∈ recvedData(act)"/>
+<org.eventb.core.guard name="_KiaFMCPSEeWw7avYyJIc7Q" org.eventb.core.label="g4" org.eventb.core.predicate="data &lt; safetyThreshold"/>
+<org.eventb.core.action name="_KiaFMSPSEeWw7avYyJIc7Q" org.eventb.core.assignment="recvedData(act) ≔ recvedData(act) ∖ {data}" org.eventb.core.label="a1"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_N3WAoCPSEeWw7avYyJIc7Q" org.eventb.core.comment="resetting emergency alert status" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="reset_actuatingStatus">
+<org.eventb.core.parameter name="_N3WAoSPSEeWw7avYyJIc7Q" org.eventb.core.identifier="act"/>
+<org.eventb.core.guard name="_N3WAoiPSEeWw7avYyJIc7Q" org.eventb.core.label="g1" org.eventb.core.predicate="act ∈ dom(emergencyAlert)"/>
+<org.eventb.core.guard name="_N3WAoyPSEeWw7avYyJIc7Q" org.eventb.core.label="g2" org.eventb.core.predicate="emergencyAlert(act) = TRUE"/>
+<org.eventb.core.action name="_N3WApCPSEeWw7avYyJIc7Q" org.eventb.core.assignment="emergencyAlert(act) ≔  FALSE" org.eventb.core.label="a1"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xTHljCPBEeWw7avYyJIc7]" org.eventb.core.comment="finishing packet transmission" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="finish_tx_pkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="finish_tx_pkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xTHljCPBEeWw7avYyJIc7_" org.eventb.core.comment="the transmitted packet is removed from middleware indicating completion of transmission mechanism" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="final_tx_pkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="final_tx_pkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xTHljCPBEeWw7avYyJIc7X" org.eventb.core.comment="each node records a lost packet" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="lose_pkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="lose_pkt"/>
+</org.eventb.core.event>
+<org.eventb.core.variable name="_xAzmEiPEEeWw7avYyJIc7Q" org.eventb.core.comment="sensing period" org.eventb.core.identifier="ctlSensedFlg"/>
+<org.eventb.core.variable name="_xTHljCPBEeWw7avYyJIc7Q" org.eventb.core.comment="flood flag" org.eventb.core.identifier="floodFlg"/>
+<org.eventb.core.variable name="_xAzmECPEEeWw7avYyJIc7Q" org.eventb.core.comment="sensing period" org.eventb.core.identifier="envSensedFlg"/>
+<org.eventb.core.variable name="_xAzmESPEEeWw7avYyJIc7Q" org.eventb.core.comment="environmental/conditional data" org.eventb.core.identifier="envData"/>
+<org.eventb.core.variable name="_xAzmEyPEEeWw7avYyJIc7Q" org.eventb.core.comment="sense ndBuff" org.eventb.core.identifier="senseBuff"/>
+<org.eventb.core.invariant name="_xAzmFCPEEeWw7avYyJIc7Q" org.eventb.core.label="inv2_1" org.eventb.core.predicate="envSensedFlg ∈ND ∖Destination → BOOL"/>
+<org.eventb.core.invariant name="_xAzmFSPEEeWw7avYyJIc7Q" org.eventb.core.label="inv2_2" org.eventb.core.predicate="envData ∈ ND ∖Destination → ℤ"/>
+<org.eventb.core.invariant name="_xAzmFiPEEeWw7avYyJIc7Q" org.eventb.core.label="inv2_3" org.eventb.core.predicate="ctlSensedFlg ∈ ND ∖Destination →BOOL"/>
+<org.eventb.core.invariant name="_xAzmFyPEEeWw7avYyJIc7Q" org.eventb.core.label="inv2_4" org.eventb.core.predicate="senseBuff ∈ ND ∖Destination  → ℙ(ℤ)"/>
+<org.eventb.core.variable name="_lukw8CPREeWw7avYyJIc7Q" org.eventb.core.comment="received data at destination" org.eventb.core.identifier="recvedData"/>
+<org.eventb.core.variable name="_lukw8SPREeWw7avYyJIc7Q" org.eventb.core.comment="actuating status" org.eventb.core.identifier="emergencyAlert"/>
+<org.eventb.core.variable name="_lukw8iPREeWw7avYyJIc7Q" org.eventb.core.comment="data attached in transmitted packet" org.eventb.core.identifier="pktData"/>
+<org.eventb.core.invariant name="_lukw8yPREeWw7avYyJIc7Q" org.eventb.core.label="inv2_5" org.eventb.core.predicate="recvedData ∈ Destination → ℙ(ℤ)"/>
+<org.eventb.core.invariant name="_lukw9CPREeWw7avYyJIc7Q" org.eventb.core.label="inv2_6" org.eventb.core.predicate="emergencyAlert ∈ Actuators → BOOL"/>
+<org.eventb.core.invariant name="_hukpwCPSEeWw7avYyJIc7Q" org.eventb.core.label="inv2_7" org.eventb.core.predicate="pktData ∈  PKT  ⇸ ℤ"/>
+<org.eventb.core.variable name="_EbEnkCPfEeWw7avYyJIc7Q" org.eventb.core.comment="virtual packet at channel" org.eventb.core.identifier="vPktData"/>
+<org.eventb.core.invariant name="_EbEnkSPfEeWw7avYyJIc7Q" org.eventb.core.label="inv2_8" org.eventb.core.predicate="vPktData ∈  PKT   ⇸ ℤ"/>
+<org.eventb.core.event name="_xTHljCPBEeWw7avYyJIc7`" org.eventb.core.comment="clearing packet objects" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="clear_pkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="clear_pkt"/>
+<org.eventb.core.guard name="_bDTncCPZEeWw7avYyJIc7Q" org.eventb.core.label="g3" org.eventb.core.predicate="pkt ∈ dom(pktData)"/>
+<org.eventb.core.action name="_bDTncSPZEeWw7avYyJIc7Q" org.eventb.core.assignment="pktData ≔  {pkt} ⩤ pktData" org.eventb.core.label="a2"/>
+</org.eventb.core.event>
+</org.eventb.core.machineFile>

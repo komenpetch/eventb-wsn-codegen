@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<org.eventb.core.machineFile org.eventb.core.configuration="org.eventb.core.fwd;org.eventb.codegen.ui.cgConfig" org.eventb.texttools.text_lastmodified="1445967365519" org.eventb.texttools.text_representation="machine M5 refines M4  sees T01&#10;&#10;variables sinkBuff // (ctl) a sink buffer&#10;          ndBuff // (ctl) nodes' waiting buffer&#10;          sensingNDs // (ctl) sensing nodes&#10;          sensedPkts // (ctl) sensed packets&#10;          senseBuff // (ctl) sense ndBuff&#10;          floodedPkts // (ctl) flooded packets&#10;          floodTbl // (ctl) historical received packet used for detect duplicated packets&#10;          ctlNeighbours // (ctl) neighbour lists&#10;          recLostPkts // (ctl) record lost packet at each nodd&#10;          envSensedFlg // (env) sensing period&#10;          envData // (env) environmental/conditional data&#10;          ctlSensedFlg // (ctl)sensing period&#10;          sentDown // (ctl) transmitted packet to channel ------------------------- var of M2&#10;          sentUp // (ctl) transmitted packet up to channel&#10;          channel // (env) channel&#10;          envNeighbours // (env) neighbour list&#10;          wsnLinks // (env) dynamic WSN links&#10;          floodFlg // (ctl) flood flag&#10;          dataSeqNo // (ctl) local nodes' current data sequence number at application layer&#10;          floodSeqNo // (ctl) local nodes' current  broadcast sequence number at application layer&#10;          nbHops // (ctl) neighbour's hop count&#10;          crashedLinks // (env) cashed WSN Links&#10;          pktSrc // (ctl) src address attached in transmitted packet&#10;          pktSeqNo // (ctl) sequence number attached in transmitted packet&#10;          pktFwdr // (ctl) fowarder attached in transmitted packet&#10;          pktData // (ctl) data attached in transmitted packet&#10;          pktNbHops // (ctl) hop count attached in transmitted packet&#10;          vPktSeqNo // (env) virtual packet at channel&#10;          vPktSrc // (env) virtual packet at channel&#10;          vPktFwdr // (env) virtual packet at channel&#10;          vPktData // (env) virtual packet at channel&#10;          vPktNbHops // (env) virtual packet at chennel&#10;          totalSentBcon // (ctl) number of sent flood packets, used for cost-estimation ------------------------- var of M3&#10;          netSeqNo // (ctl) link sequence number in a packet, used for cost-estimation&#10;          linkSeqNo // (ctl) link sequence number of each node&#10;          updateNbrs // (ctl) for updating neighbours in the neighbour table&#10;          neighbourTbl // (ctl) neighbour table structure&#10;          missed // (ctl) neighbour table: field missed (number of lost packets)&#10;          received // (ctl) neighbour table: field received (number of received packets)&#10;          lastSeqno // (ctl) neighbour table: field lastSeqno in neighbour table&#10;          receiveEst // (ctl) neighbour table: field receiveEst (reception link quality)&#10;          estNDs // (ctl) estimation nodes&#10;          estNbrs // (ctl) estimation neighbours&#10;          bcastRouTimer // (ctl) broadcast route timer ------------------------- var of M4&#10;          bcastRouNodes // (ctl) route broadcast nodes&#10;          routeSeqNo // (ctl) sequence number for route packet at each node&#10;          sentEst // (ctl) neighbour table: field sentEst (transmission quality) in neighbour table&#10;          liveliness // (ctl) neighbour table: field liveliness in neighbour table&#10;          checkedLiveNbrs // (ctl) checked liveliness nodes&#10;          chooseParentTimer // (ctl) choose parent timer ------------------------- var of M5&#10;          nodes // (ctl) nodes in the route tree&#10;          completedRoute // (ctl) completed route flag&#10;          cpCost // (ctl) current parent cost&#10;          cRouteTree // (ctl) the current route tree&#10;          calPCostNDs // (ctl) for calculated cost nodes&#10;          calPCost // (ctl) calculated cost for finding min&#10;          pktDestAddr // (ctl) packet field destination addr for channel&#10;          vPktDestAddr // (env) packet field destination addr for channel&#10;          calPCostFlg // (ctl) calculated path cost&#10;          parent // (ctl) neighbour table: parent of neighbour&#10;          cost // (ctl) neighbour table: path cost&#10;          deadNbrs // (ctl) dead neighbours&#10;          chosenNDs // (ctl) chosen nodes for identifying a parent&#10;          Nbrs // (ctl) list of neighbours&#10;&#10;&#10;invariants&#10;  @inv5_1 chooseParentTimer ∈ BOOL&#10;  @inv5_21 nodes ⊆ ND&#10;  @inv5_22 cRouteTree ∈ (nodes ∖ {Sink})→ nodes&#10;  @inv5_3 Nbrs ⊆ ND&#10;  @inv5_4 completedRoute ∈ BOOL&#10;  @inv5_6 cpCost ∈ ND → (ℕ ∪ {INFINITY})&#10;  @inv5_7 calPCostNDs ∈ ND  ↔ ND&#10;  @inv5_8 calPCost ∈ calPCostNDs → ℕ&#10;  @inv5_9 vPktDestAddr ∈ PKT ⇸ (ND ∪  {BROADCAST})&#10;  @inv5_10 calPCostFlg ∈ BOOL&#10;  @inv5_11 pktDestAddr ∈  PKT ⇸ (ND ∪  {BROADCAST})&#10;  @inv5_12 parent ∈ neighbourTbl →  (ND ∪  {BROADCAST})&#10;  @inv5_13 cost ∈ neighbourTbl →ℕ&#10;  @inv5_14 deadNbrs ⊆ ND // @inv5_15 chooseParentFlg ∈ ND ∖ {Sink} → BOOL // @saf5_101 completedRoute = TRUE ⇒ dom(cRouteTree) = ND ∖ {Sink} // the route tree structure&#10;  @inv5_16 chosenNDs ⊆ ND ∖ {Sink}&#10;  /* @saf5_102 ∀S · S ⊆  cRouteTree∼[S] ⇒ S = ∅&#10;     @saf5_103 completedRoute = TRUE ⇒ nodes = ND&#10;     theorem @mth1 ∀T·(Sink∈T ∧ cRouteTree∼[T] ⊆ T ⇒   nodes ⊆ T) // help to prove @mth3&#10;     theorem @mth2 nodes ⊆ {Sink} ∪ (tcl(cRouteTree))∼[{Sink}] // help to prove @mth3&#10;     theorem @mth3 nodes ∖ {Sink} ⊆ (tcl(cRouteTree))∼[{Sink}] // reachability property */&#10;&#10;events&#10;  event INITIALISATION extends INITIALISATION&#10;    then&#10;      @int5_1 chooseParentTimer ≔ FALSE&#10;      @int5_21 nodes ≔ {Sink}&#10;      @int5_22 cRouteTree ≔ ∅&#10;      @int5_3 Nbrs≔ ∅&#10;      @int5_4 completedRoute ≔ FALSE&#10;      @int5_6 cpCost ≔ ((ND∖{Sink}) × {INFINITY}) ∪ {Sink ↦ 0}&#10;      @int5_8 calPCostNDs ≔ ∅&#10;      @int5_9 calPCost ≔ ∅&#10;      @int5_11 pktDestAddr ≔ ∅&#10;      @int5_12 vPktDestAddr ≔ ∅&#10;      @int5_16 calPCostFlg ≔ FALSE&#10;      @int5_19 deadNbrs ≔ ∅&#10;      @int5_23 parent ≔ ∅&#10;      @int5_24 cost ≔ ∅ // @int5_25 chooseParentFlg ≔((ND∖{Sink}) × {FALSE})&#10;      @int5_26 chosenNDs ≔ ∅&#10;  end&#10;&#10;  event add_link // (env) channel sets a topology&#10;  extends add_link&#10;  end&#10;&#10;  event disconnect_link // (env) disconnecting a link&#10;  extends disconnect_link&#10;  end&#10;&#10;  event recover_link // (env) recovering a link&#10;  extends recover_link&#10;  end&#10;&#10;  event start_sensing // (env) activating each node to sense data&#10;  extends start_sensing&#10;  end&#10;&#10;  event finish_sensing // (shd) finishing sensing data process&#10;  extends finish_sensing&#10;  end&#10;&#10;  event sensing // (shd) each node senses a data from environment&#10;  extends sensing&#10;  end&#10;&#10;  event create_dataPkt // (ctl)  create a data packet&#10;  extends create_dataPkt&#10;    where&#10;      @g17 pkt  ∉ dom(pktDestAddr)&#10;    then&#10;      @a13 pktDestAddr ≔ pktDestAddr ∪   {pkt ↦ BROADCAST}&#10;  end&#10;&#10;  event start_flooding // (ctl) starting flooding (used for a control packet)&#10;  extends start_flooding&#10;  end&#10;&#10;  event reset_flooding // (ctl) resetting flooding (used for a control packet)&#10;  extends reset_flooding&#10;  end&#10;&#10;  event create_bconPkt // (ctl)  create a beacon packet&#10;  extends create_bconPkt&#10;    where&#10;      @g18 pkt ∉ dom(pktDestAddr)&#10;    then&#10;      @a11 pktDestAddr ≔ pktDestAddr ∪   {pkt ↦ BROADCAST}&#10;  end&#10;&#10;  event bcastRou_due // (ctl) broadcast route time due&#10;  extends bcastRou_due&#10;  end&#10;&#10;  event reset_bcastRouTimer // (ctl) reseting broadcast route timer for the next round&#10;  extends reset_bcastRouTimer&#10;  end&#10;&#10;  event create_routePkt // (ctl) creating a route packet&#10;  extends create_routePkt&#10;    where&#10;      @g21 pkt ∉ dom(pktDestAddr)&#10;    then&#10;      @a11 pktDestAddr ≔ pktDestAddr ∪   {pkt ↦ BROADCAST}&#10;  end&#10;&#10;  event start_tx_dataPkt_bct // (ctl) starting broadcasting a data packet to a channel&#10;  extends start_tx_dataPkt&#10;    where&#10;      @g8 completedRoute = FALSE&#10;  end&#10;&#10;  event start_tx_dataPkt_fwd // (ctl) starting unicasting a data packet to a channel via route&#10;  extends start_tx_dataPkt&#10;    any y&#10;    where&#10;      @g8 completedRoute = TRUE&#10;      @g9 x ∈ dom( cRouteTree)&#10;      @g10 y =  cRouteTree(x)&#10;      @g11 pkt ∈ dom(pktDestAddr)&#10;    then&#10;      @a6 pktDestAddr ≔ pktDestAddr   {pkt ↦ y}&#10;  end&#10;&#10;  event start_tx_bconPkt // (ctl) starting transmiting a beacon packet to a channel&#10;  extends start_tx_bconPkt&#10;  end&#10;&#10;  event start_tx_routePkt // (ctl) starting transmiting a route packet to a channel&#10;  extends start_tx_routePkt&#10;  end&#10;&#10;  event send_down // (ctl) sending a packet down to a channel&#10;  extends send_down&#10;    any dest&#10;    where&#10;      @g13 pkt ∈ dom(pktDestAddr) ∧ dest=pktDestAddr(pkt)&#10;      @g14 pkt ∉ dom(vPktDestAddr) ∧ dest ∈ ND ∪ {BROADCAST}&#10;    then&#10;      @a14 pktDestAddr ≔  {pkt} ⩤ pktDestAddr&#10;      @a15 vPktDestAddr ≔ vPktDestAddr ∪ {pkt ↦ dest}&#10;  end&#10;&#10;  event find_neighbours // (env) channel finds the neighbour list of the forwarder&#10;  extends find_neighbours&#10;    any dest&#10;    where&#10;      @g7 pkt ∈ dom(vPktDestAddr) ∧ dest=vPktDestAddr(pkt)&#10;      @g8 dest = BROADCAST&#10;  end&#10;&#10;  event assign_forwarder // (env) channel assigns specific forwarder&#10;  extends assign_forwarder&#10;    any dest&#10;    where&#10;      @g7 pkt ∈ dom(vPktDestAddr) ∧ dest=vPktDestAddr(pkt)&#10;      @g8 dest ≠ BROADCAST&#10;      @g9 nb = dest&#10;  end&#10;&#10;  event send_up // (env) channel sends the neighbour information&#10;  extends send_up&#10;    any dest&#10;    where&#10;      @g20 pkt ∈ dom(vPktDestAddr) ∧ dest = vPktDestAddr(pkt)&#10;      @g21 pkt ∉ dom(pktDestAddr)&#10;    then&#10;      @a16 vPktDestAddr ≔ vPktDestAddr ∖ {pkt↦dest }&#10;      @a17 pktDestAddr ≔ pktDestAddr  ∪ {pkt  ↦dest}&#10;  end&#10;&#10;  event receive_dataPkt // (ctl) each neighbour node receives a data pacekt from a channel&#10;  extends receive_dataPkt&#10;  end&#10;&#10;  event receive_dup_dataPkt // (ctl) each neighbour node receives a duplicated data packet from a channel&#10;  extends receive_dup_dataPkt&#10;  end&#10;&#10;  event receive_controlPkt // (ctl) each neighbour node receives a  control pacekt from a channel&#10;  extends receive_controlPkt&#10;  end&#10;&#10;  event receive_dup_controlPkt // (ctl) each neighbour node including sink receives a duplicated control packet from channel&#10;  extends receive_dup_controlPkt&#10;  end&#10;&#10;  event sink_recv_dataPkt // (ctl) each neighbour node receives a data pacekt from channel&#10;  extends sink_recv_dataPkt&#10;  end&#10;&#10;  event sink_recv_controlPkt // (ctl) sink receives a control packet&#10;  extends sink_recv_controlPkt&#10;  end&#10;&#10;  event add_newEntry // (ctl) add new entry into the neighbour table&#10;  extends add_newEntry&#10;    where&#10;      @g11 y ↦ x ↦ BROADCAST ∉ parent&#10;      @g12 (y ↦ x ↦ INFINITY ∉ cost) ∧ (x ≠ Sink)&#10;    then&#10;      @a8 parent ≔ parent  ∪  {y ↦ x ↦ BROADCAST}&#10;      @a9 cost ≔ cost ∪ {y↦x↦INFINITY}&#10;  end&#10;&#10;  event add_newEntry_sink // (ctl) add new entry into the neighbour table&#10;  extends add_newEntry&#10;    where&#10;      @g11 y ↦ x ↦ BROADCAST ∉ parent&#10;      @g12 (y ↦ x ↦ 0 ∉ cost) ∧ (x = Sink)&#10;    then&#10;      @a8 parent ≔ parent  ∪  {y ↦ x ↦ BROADCAST}&#10;      @a9 cost ≔ cost ∪ {y↦x↦0}&#10;  end&#10;&#10;  event update_nbr // (ctl) update receiving information into the neighbour table&#10;  extends update_nbr&#10;  end&#10;&#10;  event update_route_1 // (ctl) updating information from route packet into the neighbour table (for sensor nodes)&#10;  extends update_route&#10;    any par cst&#10;    where&#10;      @g10 x ∈ dom(cRouteTree) ∧ par = cRouteTree(x)&#10;      @g11 x ∈ dom(cpCost) ∧ cst = cpCost(x) ∧ cst ≠ INFINITY&#10;      @g12 y ↦ x ∈ dom(parent) ∧ y ↦ x ↦par ∉ parent&#10;      @g13 y ↦ x ∈ dom(cost) ∧ y ↦ x ↦cst ∉ cost&#10;    then&#10;      @a4 parent ≔  parent    {y ↦ x ↦par}&#10;      @a5 cost ≔  cost    {y ↦ x ↦cst}&#10;  end&#10;&#10;  event update_route_2 // (ctl) updating information from route packet into the neighbour table (for a sink)&#10;  extends update_route&#10;    where&#10;      @g10 x ∉ dom(cRouteTree)&#10;  end&#10;&#10;  event decrease_liveliness // (ctl) decreasing liveliness of each neighbour in neighbour table&#10;  extends decrease_liveliness&#10;  end&#10;&#10;  event exclude_deadNbr // (ctl) excluding dead neighbour from  neighbour table&#10;  extends exclude_deadNbr&#10;  end&#10;&#10;  event est_due // (ctl) the link quality estimation timer due&#10;  extends est_due&#10;  end&#10;&#10;  event update_est // (cal) calculate and update reception ratio in case no lost packets or lose packets in the middle of transmission&#10;  extends update_est&#10;  end&#10;&#10;  event update_est_nothing // (ctl) for case the dead neighbour node affecting sentEst become zero&#10;  extends update_est_nothing&#10;  end&#10;&#10;  event finish_tx_pkt // (ctl) finishing packet transmission&#10;  extends finish_tx_pkt&#10;  end&#10;&#10;  event final_tx_controlPkt // (ctl) the transmitted packet is removed from middleware indicating completion of transmission mechanism&#10;  extends final_tx_controlPkt&#10;  end&#10;&#10;  event chooseParent_due // (ctl) choosing a parent period due&#10;  extends reset_bcastRouTimer&#10;    where&#10;      @g3 chooseParentTimer = FALSE&#10;    then&#10;      @a3 chooseParentTimer ≔ TRUE&#10;      @t501 deadNbrs ≔ ∅&#10;  end&#10;&#10;  event choose_node // (ctl) choosing a node who has not chosen its parent yet&#10;    any x nb&#10;    where&#10;      @g1 chooseParentTimer = TRUE&#10;      @g2 x ∈ ND ∖ {Sink} // @g3 x ∈ dom(neighbourTbl ▷ nodes) ∪ ran( nodes ◁ neighbourTbl)&#10;      @g3 x ∉ chosenNDs // x ∉ (Q ∪ deadNbrs1)&#10;      @g4 nb = ran({x} ◁  neighbourTbl) ∧ nb  ≠ ∅ // @g7 nb = ran({x} ◁ nbTbl ▷ nodes) ∧ nb  ≠ ∅ // listing the neighbours of node x whose the link quality is gerater that threshold&#10;      @g5 Nbrs= ∅&#10;      @g6 completedRoute = FALSE&#10;      @g7 calPCostFlg = FALSE // @g12 x ∈ dom(chooseParentFlg) ∧ chooseParentFlg(x) = FALSE&#10;    then&#10;      @a1 chosenNDs ≔ chosenNDs ∪ {x}&#10;      @a2 Nbrs ≔ nb&#10;  end&#10;&#10;  event cal_PCost_gt // (ctl) calculating path cost&#10;    any x nb pCost Nbrs1 rEst sEst lnkQty th&#10;    where&#10;      @g1 x ∈ chosenNDs ∖ dom(cRouteTree) ∧ nb ∈ Nbrs&#10;      @g2 th ∈ QThreshold&#10;      @g3 th &gt; 0 ∧ th = Qlow&#10;      @g4 x ↦nb   ∈ neighbourTbl&#10;      @g5 x ↦nb  ∈ dom(receiveEst) ∧  receiveEst(x ↦nb) ≥ th&#10;      @g6 rEst ∈ ℕ ∧ rEst = receiveEst(x ↦ nb)&#10;      @g7 x ↦nb ∈ dom(sentEst) ∧  sentEst(x ↦nb) ≥ th&#10;      @g8 sEst ∈ ℕ  ∧ sEst = sentEst(x ↦ nb)&#10;      @g9 lnkQty ∈ ℕ ∧ lnkQty = ((120−rEst) ∗ (120−sEst))&#10;      @g10 Nbrs1 = ran({x} ◁ neighbourTbl) ∧ Nbrs1 ≠ ∅&#10;      @g11 pCost∈ ℕ&#10;      @g12 cpCost(nb) = pCost  ∧ pCost ≠ INFINITY&#10;      @g13 x ↦ nb ∉ calPCostNDs&#10;      @g14 pCost + lnkQty ≥ 0&#10;    then&#10;      @a1 calPCostNDs ≔  calPCostNDs ∪  {x↦nb}&#10;      @a2 calPCost ≔ calPCost  ∪  {x ↦ nb↦ (pCost + lnkQty)}&#10;      @a3 Nbrs ≔ Nbrs ∖ {nb}&#10;      @a4 calPCostFlg ≔ TRUE&#10;  end&#10;&#10;  event cal_PCost_gt_skip // (ctl) skipping calculating path cost for the case that the node is further far away from the sink&#10;    any x nb m Nbrs1 pREst pSEst pCost th&#10;    where&#10;      @g1 x  ∈ chosenNDs ∖ dom(cRouteTree)&#10;      @g2 th ∈ QThreshold&#10;      @g3 th &gt; 0 ∧ th = Qlow&#10;      @g4 nb ∈ Nbrs&#10;      @g5 x ↦nb   ∈ neighbourTbl&#10;      @g6 x ↦nb  ∈ dom(receiveEst) ∧  receiveEst(x ↦nb) ≥ th&#10;      @g7 pREst ∈ ℕ ∧ pREst = receiveEst(x ↦ nb)&#10;      @g8 x ↦nb ∈ dom(sentEst) ∧  sentEst(x ↦nb) ≥ th&#10;      @g9 pSEst ∈ ℕ  ∧ pSEst = sentEst(x ↦ nb)&#10;      @g10 pCost ∈ ℕ ∧ pCost = ((120−pREst) ∗ (120−pSEst))&#10;      @g11 Nbrs1 = ran({x} ◁ neighbourTbl) ∧ Nbrs1 ≠ ∅&#10;      @g12 m ∈ ℕ&#10;      @g13 cpCost(nb) = m  ∧ m = INFINITY&#10;      @g14 x ↦ nb ∉ calPCostNDs&#10;      @g15 m + pCost ≥ 0&#10;    then&#10;      @a1 Nbrs ≔ Nbrs  ∖ {nb}&#10;      @a2 calPCostFlg ≔ TRUE&#10;  end&#10;&#10;  event cal_PCost_le // (ctl) skipping calculating path cost for the case that the neighbour node has the link quality less than the threshold&#10;    any x nb pREst th&#10;    where&#10;      @g1 x ∈ chosenNDs ∖ dom(cRouteTree)&#10;      @g2 th ∈ QThreshold&#10;      @g3 th &gt; 0 ∧ th = Qlow&#10;      @g4 nb ∈ Nbrs&#10;      @g5 x ↦nb   ∈ neighbourTbl&#10;      @g6 x ↦nb  ∈ dom(receiveEst) ∧  x ↦nb ∈ dom(sentEst)&#10;      @g7 pREst ∈ ℕ ∧ pREst = receiveEst(x ↦ nb)&#10;      @g8 receiveEst(x ↦nb) &lt; th ∨ sentEst(x ↦nb) &lt; th&#10;    then&#10;      @a1 Nbrs ≔ Nbrs  ∖ {nb}&#10;      @a42 calPCostFlg ≔ TRUE&#10;  end&#10;&#10;  event choose_parent // (ctl) choosing a parent&#10;    any x p m des&#10;    where&#10;      @g1 x  ∈  ND ∖ {Sink}&#10;      @g2 x ∉ dom(cRouteTree)&#10;      @g3 completedRoute = FALSE&#10;      @g4 x ∉ nodes&#10;      @g5 Nbrs = ∅&#10;      @g6 ran(calPCost) ≠ ∅&#10;      @g7 m = min(ran(calPCost))&#10;      @g8 p ∈ ran(dom(calPCost ▷ {m}))&#10;      @g9 x ↦ p ∈ calPCostNDs&#10;      @g10 calPCostFlg = TRUE // @g12 ∀ S · S⊆(cRouteTree∪{x ↦p })∼[S] ⇒    S=∅&#10;      @g11 x ≠ p&#10;      @g12 des ⊆ nodes&#10;      @g13 p ∈ nodes ∧ p ∉ des ∪ {x}&#10;    then&#10;      @a1 cRouteTree  ≔ cRouteTree ∪ {x ↦ p}&#10;      @a2 nodes ≔ nodes  ∪  {x}&#10;      @a4 cpCost(x) ≔ m&#10;      @a6 calPCostNDs ≔ ∅&#10;      @a5 calPCost ≔ ∅&#10;      @a7 calPCostFlg ≔ FALSE&#10;  end&#10;&#10;  event choose_parent_skip // (ctl) skipping choosing parent for the case that all links have link quality lower than the quality threshold&#10;    any x p m&#10;    where&#10;      @typing_p p ∈ ℤ&#10;      @typing_m m ∈ ℤ&#10;      @typing_x x ∈ ℤ&#10;      @g1 x = x&#10;      @g2 p ∈ nodes&#10;      @g3 x  ∈  ND ∖ {Sink}&#10;      @g4 x ∉ dom(cRouteTree)&#10;      @g5 completedRoute = FALSE&#10;      @g6 Nbrs = ∅&#10;      @g7 calPCostNDs = ∅&#10;      @g8 calPCostFlg = TRUE&#10;      @g9 x ∉ deadNbrs&#10;    then&#10;      @a1 calPCostFlg ≔ FALSE&#10;  end&#10;&#10;  event report_routeCompletion // (ctl) reporting the route completion&#10;    any r&#10;    where&#10;      @typing_r r ∈ ℙ(ℤ × ℤ)&#10;      @g1 completedRoute = FALSE&#10;      @g2 r = cRouteTree&#10;      @g4 Nbrs = ∅ // nodes =  ND&#10;    then&#10;      @a1 completedRoute ≔ TRUE&#10;  end&#10;&#10;  event reset_routeTimer&#10;    where&#10;      @g1 chooseParentTimer = TRUE&#10;      @g4 chosenNDs ≠ ∅&#10;    then&#10;      @a2 chooseParentTimer ≔ FALSE&#10;      @a4 chosenNDs ≔ ∅&#10;  end&#10;&#10;  event reset_route // (ctl) resetting the route tree&#10;    where&#10;      @g1 completedRoute = TRUE&#10;      @g3 dom(cRouteTree) =  ND  ∖ {Sink}&#10;    then&#10;      @a1 completedRoute ≔ FALSE&#10;      @a2 cRouteTree ≔ ∅&#10;      @a3 nodes ≔ {Sink}&#10;  end&#10;&#10;  event lose_all_neighbours // (env) channel loes all neighbours&#10;  extends lose_all_neighbours&#10;  end&#10;&#10;  event lose_pkt // (ctl) each node records a lost packet&#10;  extends lose_pkt&#10;  end&#10;&#10;  event final_tx_pkt extends final_tx_pkt&#10;  end&#10;end&#10;" version="5">
+<org.eventb.core.refinesMachine name="'" org.eventb.core.target="M4"/>
+<org.eventb.core.seesContext name="_a98EoXvQEeWAP_VoIyV-ZA" org.eventb.core.target="T01"/>
+<org.eventb.core.variable name="_K9GyZZZfEeSDW82aTOSJOQ" org.eventb.core.comment="(ctl) a sink buffer" org.eventb.core.identifier="sinkBuff"/>
+<org.eventb.core.variable name="_rjoVcCGEEeWBBdN5RKBVAg" org.eventb.core.comment="(ctl) nodes' waiting buffer" org.eventb.core.identifier="ndBuff"/>
+<org.eventb.core.variable name="_JrKrlJZuEeSDW82aTOSJOQ" org.eventb.core.comment="(ctl) sensing nodes" org.eventb.core.identifier="sensingNDs"/>
+<org.eventb.core.variable name="_JrKrlZZuEeSDW82aTOSJOQ" org.eventb.core.comment="(ctl) sensed packets" org.eventb.core.identifier="sensedPkts"/>
+<org.eventb.core.variable name="_4RlM4JdaEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) sense ndBuff" org.eventb.core.identifier="senseBuff"/>
+<org.eventb.core.variable name="_JrKrl5ZuEeSDW82aTOSJOQ" org.eventb.core.comment="(ctl) flooded packets" org.eventb.core.identifier="floodedPkts"/>
+<org.eventb.core.variable name="_8v9XkJaoEeSDW82aTOSJOQ" org.eventb.core.comment="(ctl) historical received packet used for detect duplicated packets" org.eventb.core.identifier="floodTbl"/>
+<org.eventb.core.variable name="_oRByEJakEeSDW82aTOSJOQ" org.eventb.core.comment="(ctl) neighbour lists" org.eventb.core.identifier="ctlNeighbours"/>
+<org.eventb.core.variable name="_L6mz8JpmEeS9D-NIy-9JrQ" org.eventb.core.comment="(ctl) record lost packet at each nodd" org.eventb.core.identifier="recLostPkts"/>
+<org.eventb.core.variable name="_xPSgwJdYEeS7UZUzQZNbaA" org.eventb.core.comment="(env) sensing period" org.eventb.core.identifier="envSensedFlg"/>
+<org.eventb.core.variable name="_xPSgwZdYEeS7UZUzQZNbaA" org.eventb.core.comment="(env) environmental/conditional data" org.eventb.core.identifier="envData"/>
+<org.eventb.core.variable name="_xPSgwpdYEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl)sensing period" org.eventb.core.identifier="ctlSensedFlg"/>
+<org.eventb.core.variable name="_URRs0JapEeSDW82aTOSJOQ" org.eventb.core.comment="(ctl) transmitted packet to channel ------------------------- var of M2" org.eventb.core.identifier="sentDown"/>
+<org.eventb.core.variable name="_URRs0ZapEeSDW82aTOSJOQ" org.eventb.core.comment="(ctl) transmitted packet up to channel" org.eventb.core.identifier="sentUp"/>
+<org.eventb.core.variable name="_URRs0papEeSDW82aTOSJOQ" org.eventb.core.comment="(env) channel" org.eventb.core.identifier="channel"/>
+<org.eventb.core.variable name="_URRs05apEeSDW82aTOSJOQ" org.eventb.core.comment="(env) neighbour list" org.eventb.core.identifier="envNeighbours"/>
+<org.eventb.core.variable name="_URRs1JapEeSDW82aTOSJOQ" org.eventb.core.comment="(env) dynamic WSN links" org.eventb.core.identifier="wsnLinks"/>
+<org.eventb.core.variable name="_iok5kJdZEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) flood flag" org.eventb.core.identifier="floodFlg"/>
+<org.eventb.core.variable name="_lcsi0JdgEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) local nodes' current data sequence number at application layer" org.eventb.core.identifier="dataSeqNo"/>
+<org.eventb.core.variable name="_lcsi0ZdgEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) local nodes' current  broadcast sequence number at application layer" org.eventb.core.identifier="floodSeqNo"/>
+<org.eventb.core.variable name="_F-D04JdkEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) neighbour's hop count" org.eventb.core.identifier="nbHops"/>
+<org.eventb.core.variable name="_WA2mQJdoEeS7UZUzQZNbaA" org.eventb.core.comment="(env) cashed WSN Links" org.eventb.core.identifier="crashedLinks"/>
+<org.eventb.core.variable name="_lcsi0pdgEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) src address attached in transmitted packet" org.eventb.core.identifier="pktSrc"/>
+<org.eventb.core.variable name="_lcsi05dgEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) sequence number attached in transmitted packet" org.eventb.core.identifier="pktSeqNo"/>
+<org.eventb.core.variable name="_F-Eb8JdkEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) fowarder attached in transmitted packet" org.eventb.core.identifier="pktFwdr"/>
+<org.eventb.core.variable name="_lcsi1JdgEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) data attached in transmitted packet" org.eventb.core.identifier="pktData"/>
+<org.eventb.core.variable name="_F-FDAJdkEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) hop count attached in transmitted packet" org.eventb.core.identifier="pktNbHops"/>
+<org.eventb.core.variable name="_lcsi1ZdgEeS7UZUzQZNbaA" org.eventb.core.comment="(env) virtual packet at channel" org.eventb.core.identifier="vPktSeqNo"/>
+<org.eventb.core.variable name="_lcsi1pdgEeS7UZUzQZNbaA" org.eventb.core.comment="(env) virtual packet at channel" org.eventb.core.identifier="vPktSrc"/>
+<org.eventb.core.variable name="_F-FqEJdkEeS7UZUzQZNbaA" org.eventb.core.comment="(env) virtual packet at channel" org.eventb.core.identifier="vPktFwdr"/>
+<org.eventb.core.variable name="_lcsi15dgEeS7UZUzQZNbaA" org.eventb.core.comment="(env) virtual packet at channel" org.eventb.core.identifier="vPktData"/>
+<org.eventb.core.variable name="_F-FqEZdkEeS7UZUzQZNbaA" org.eventb.core.comment="(env) virtual packet at chennel" org.eventb.core.identifier="vPktNbHops"/>
+<org.eventb.core.variable name="_dITCsJdrEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) number of sent flood packets, used for cost-estimation ------------------------- var of M3" org.eventb.core.identifier="totalSentBcon"/>
+<org.eventb.core.variable name="_dITCsZdrEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) link sequence number in a packet, used for cost-estimation" org.eventb.core.identifier="netSeqNo"/>
+<org.eventb.core.variable name="_dITCspdrEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) link sequence number of each node" org.eventb.core.identifier="linkSeqNo"/>
+<org.eventb.core.variable name="_dITpwJdrEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) for updating neighbours in the neighbour table" org.eventb.core.identifier="updateNbrs"/>
+<org.eventb.core.variable name="_dITpwZdrEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) neighbour table structure" org.eventb.core.identifier="neighbourTbl"/>
+<org.eventb.core.variable name="_dITpwpdrEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) neighbour table: field missed (number of lost packets)" org.eventb.core.identifier="missed"/>
+<org.eventb.core.variable name="_dIUQ0JdrEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) neighbour table: field received (number of received packets)" org.eventb.core.identifier="received"/>
+<org.eventb.core.variable name="_dIUQ0ZdrEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) neighbour table: field lastSeqno in neighbour table" org.eventb.core.identifier="lastSeqno"/>
+<org.eventb.core.variable name="_dIUQ0pdrEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) neighbour table: field receiveEst (reception link quality)" org.eventb.core.identifier="receiveEst"/>
+<org.eventb.core.variable name="_dIUQ05drEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) estimation nodes" org.eventb.core.identifier="estNDs"/>
+<org.eventb.core.variable name="_dIU34JdrEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) estimation neighbours" org.eventb.core.identifier="estNbrs"/>
+<org.eventb.core.variable name="_cASm4ZdtEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) broadcast route timer ------------------------- var of M4" org.eventb.core.identifier="bcastRouTimer"/>
+<org.eventb.core.variable name="_cATN8JdtEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) route broadcast nodes" org.eventb.core.identifier="bcastRouNodes"/>
+<org.eventb.core.variable name="_cATN8ZdtEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) sequence number for route packet at each node" org.eventb.core.identifier="routeSeqNo"/>
+<org.eventb.core.variable name="_cATN8pdtEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) neighbour table: field sentEst (transmission quality) in neighbour table" org.eventb.core.identifier="sentEst"/>
+<org.eventb.core.variable name="_cAT1AJdtEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) neighbour table: field liveliness in neighbour table" org.eventb.core.identifier="liveliness"/>
+<org.eventb.core.variable name="_cAT1AZdtEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) checked liveliness nodes" org.eventb.core.identifier="checkedLiveNbrs"/>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaB" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="INITIALISATION">
+<org.eventb.core.action name="_RfazsJduEeS7UZUzQZNbaA" org.eventb.core.assignment="chooseParentTimer ≔ FALSE" org.eventb.core.label="int5_1"/>
+<org.eventb.core.action name="_RfazsZduEeS7UZUzQZNbaA" org.eventb.core.assignment="nodes ≔ {Sink}" org.eventb.core.label="int5_21"/>
+<org.eventb.core.action name="_RfazspduEeS7UZUzQZNbaA" org.eventb.core.assignment="cRouteTree ≔ ∅" org.eventb.core.label="int5_22"/>
+<org.eventb.core.action name="_Rfazs5duEeS7UZUzQZNbaA" org.eventb.core.assignment="Nbrs≔ ∅" org.eventb.core.label="int5_3"/>
+<org.eventb.core.action name="_RfaztJduEeS7UZUzQZNbaA" org.eventb.core.assignment="completedRoute ≔ FALSE" org.eventb.core.label="int5_4"/>
+<org.eventb.core.action name="_RfaztpduEeS7UZUzQZNbaA" org.eventb.core.assignment="cpCost ≔ ((ND∖{Sink}) × {INFINITY}) ∪ {Sink ↦ 0}" org.eventb.core.label="int5_6"/>
+<org.eventb.core.action name="_Rfazt5duEeS7UZUzQZNbaA" org.eventb.core.assignment="calPCostNDs ≔ ∅" org.eventb.core.label="int5_8"/>
+<org.eventb.core.action name="_RfazuJduEeS7UZUzQZNbaA" org.eventb.core.assignment="calPCost ≔ ∅" org.eventb.core.label="int5_9"/>
+<org.eventb.core.action name="_RfazuZduEeS7UZUzQZNbaA" org.eventb.core.assignment="pktDestAddr ≔ ∅" org.eventb.core.label="int5_11"/>
+<org.eventb.core.action name="_RfazupduEeS7UZUzQZNbaA" org.eventb.core.assignment="vPktDestAddr ≔ ∅" org.eventb.core.label="int5_12"/>
+<org.eventb.core.action name="_Rfazu5duEeS7UZUzQZNbaA" org.eventb.core.assignment="calPCostFlg ≔ FALSE" org.eventb.core.label="int5_16"/>
+<org.eventb.core.action name="_RfazvJduEeS7UZUzQZNbaA" org.eventb.core.assignment="deadNbrs ≔ ∅" org.eventb.core.label="int5_19"/>
+<org.eventb.core.action name="_RfazvZduEeS7UZUzQZNbaA" org.eventb.core.assignment="parent ≔ ∅" org.eventb.core.label="int5_23"/>
+<org.eventb.core.action name="_RfazvpduEeS7UZUzQZNbaA" org.eventb.core.assignment="cost ≔ ∅" org.eventb.core.comment="@int5_25 chooseParentFlg ≔((ND∖{Sink}) × {FALSE})" org.eventb.core.label="int5_24"/>
+<org.eventb.core.action name="_Rfazv5duEeS7UZUzQZNbaA" org.eventb.core.assignment="chosenNDs ≔ ∅" org.eventb.core.label="int5_26"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaC" org.eventb.core.comment="(env) channel sets a topology" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="add_link">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="add_link"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaD" org.eventb.core.comment="(env) disconnecting a link" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="disconnect_link">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="disconnect_link"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaE" org.eventb.core.comment="(env) recovering a link" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="recover_link">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="recover_link"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaF" org.eventb.core.comment="(env) activating each node to sense data" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="start_sensing">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="start_sensing"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaG" org.eventb.core.comment="(shd) finishing sensing data process" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="finish_sensing">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="finish_sensing"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaH" org.eventb.core.comment="(shd) each node senses a data from environment" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="sensing">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="sensing"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaI" org.eventb.core.comment="(ctl)  create a data packet" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="create_dataPkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="create_dataPkt"/>
+<org.eventb.core.guard name="(" org.eventb.core.label="g17" org.eventb.core.predicate="pkt  ∉ dom(pktDestAddr)"/>
+<org.eventb.core.action name=")" org.eventb.core.assignment="pktDestAddr ≔ pktDestAddr ∪   {pkt ↦ BROADCAST}" org.eventb.core.label="a13"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaJ" org.eventb.core.comment="(ctl) starting flooding (used for a control packet)" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="start_flooding">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="start_flooding"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaK" org.eventb.core.comment="(ctl) resetting flooding (used for a control packet)" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="reset_flooding">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="reset_flooding"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaL" org.eventb.core.comment="(ctl)  create a beacon packet" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="create_bconPkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="create_bconPkt"/>
+<org.eventb.core.guard name="__ETGwJduEeS7UZUzQZNbaA" org.eventb.core.label="g18" org.eventb.core.predicate="pkt ∉ dom(pktDestAddr)"/>
+<org.eventb.core.action name="__ETGwZduEeS7UZUzQZNbaA" org.eventb.core.assignment="pktDestAddr ≔ pktDestAddr ∪   {pkt ↦ BROADCAST}" org.eventb.core.label="a11"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaM" org.eventb.core.comment="(ctl) broadcast route time due" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="bcastRou_due">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="bcastRou_due"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaN" org.eventb.core.comment="(ctl) reseting broadcast route timer for the next round" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="reset_bcastRouTimer">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="reset_bcastRouTimer"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaO" org.eventb.core.comment="(ctl) creating a route packet" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="create_routePkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="create_routePkt"/>
+<org.eventb.core.guard name="__ETGwpduEeS7UZUzQZNbaA" org.eventb.core.label="g21" org.eventb.core.predicate="pkt ∉ dom(pktDestAddr)"/>
+<org.eventb.core.action name="__ETGw5duEeS7UZUzQZNbaA" org.eventb.core.assignment="pktDestAddr ≔ pktDestAddr ∪   {pkt ↦ BROADCAST}" org.eventb.core.label="a11"/>
+</org.eventb.core.event>
+<org.eventb.core.variable name="_Rfo2IJduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) choose parent timer ------------------------- var of M5" org.eventb.core.identifier="chooseParentTimer"/>
+<org.eventb.core.variable name="_Rfo2IZduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) nodes in the route tree" org.eventb.core.identifier="nodes"/>
+<org.eventb.core.variable name="_Rfo2I5duEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) completed route flag" org.eventb.core.identifier="completedRoute"/>
+<org.eventb.core.variable name="_Rfo2JZduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) current parent cost" org.eventb.core.identifier="cpCost"/>
+<org.eventb.core.variable name="_Rfo2JpduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) the current route tree" org.eventb.core.identifier="cRouteTree"/>
+<org.eventb.core.variable name="_Rfo2J5duEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) for calculated cost nodes" org.eventb.core.identifier="calPCostNDs"/>
+<org.eventb.core.variable name="_Rfo2KJduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) calculated cost for finding min" org.eventb.core.identifier="calPCost"/>
+<org.eventb.core.variable name="_2l6vwJdvEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) packet field destination addr for channel" org.eventb.core.identifier="pktDestAddr"/>
+<org.eventb.core.variable name="_2l6vwZdvEeS7UZUzQZNbaA" org.eventb.core.comment="(env) packet field destination addr for channel" org.eventb.core.identifier="vPktDestAddr"/>
+<org.eventb.core.variable name="_Rfo2K5duEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) calculated path cost" org.eventb.core.identifier="calPCostFlg"/>
+<org.eventb.core.variable name="_Rfo2LJduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) neighbour table: parent of neighbour" org.eventb.core.identifier="parent"/>
+<org.eventb.core.variable name="_Rfo2LZduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) neighbour table: path cost" org.eventb.core.identifier="cost"/>
+<org.eventb.core.variable name="_Rfo2LpduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) dead neighbours" org.eventb.core.identifier="deadNbrs"/>
+<org.eventb.core.variable name="_Rfo2L5duEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) chosen nodes for identifying a parent" org.eventb.core.identifier="chosenNDs"/>
+<org.eventb.core.invariant name="_Rfo2MJduEeS7UZUzQZNbaA" org.eventb.core.label="inv5_1" org.eventb.core.predicate="chooseParentTimer ∈ BOOL"/>
+<org.eventb.core.invariant name="_Rfo2MZduEeS7UZUzQZNbaA" org.eventb.core.label="inv5_21" org.eventb.core.predicate="nodes ⊆ ND"/>
+<org.eventb.core.invariant name="_Rfo2MpduEeS7UZUzQZNbaA" org.eventb.core.label="inv5_22" org.eventb.core.predicate="cRouteTree ∈ (nodes ∖ {Sink})→ nodes"/>
+<org.eventb.core.invariant name="_Rfo2M5duEeS7UZUzQZNbaA" org.eventb.core.label="inv5_3" org.eventb.core.predicate="Nbrs ⊆ ND"/>
+<org.eventb.core.invariant name="_Rfo2NJduEeS7UZUzQZNbaA" org.eventb.core.label="inv5_4" org.eventb.core.predicate="completedRoute ∈ BOOL"/>
+<org.eventb.core.invariant name="_Rfu8wJduEeS7UZUzQZNbaA" org.eventb.core.label="inv5_6" org.eventb.core.predicate="cpCost ∈ ND → (ℕ ∪ {INFINITY})"/>
+<org.eventb.core.invariant name="_Rfu8wZduEeS7UZUzQZNbaA" org.eventb.core.label="inv5_7" org.eventb.core.predicate="calPCostNDs ∈ ND  ↔ ND"/>
+<org.eventb.core.invariant name="_Rfu8wpduEeS7UZUzQZNbaA" org.eventb.core.label="inv5_8" org.eventb.core.predicate="calPCost ∈ calPCostNDs → ℕ"/>
+<org.eventb.core.invariant name="_Rfu8w5duEeS7UZUzQZNbaA" org.eventb.core.label="inv5_9" org.eventb.core.predicate="vPktDestAddr ∈ PKT ⇸ (ND ∪  {BROADCAST})"/>
+<org.eventb.core.invariant name="_Rfu8xJduEeS7UZUzQZNbaA" org.eventb.core.label="inv5_10" org.eventb.core.predicate="calPCostFlg ∈ BOOL"/>
+<org.eventb.core.invariant name="_Rfu8xZduEeS7UZUzQZNbaA" org.eventb.core.label="inv5_11" org.eventb.core.predicate="pktDestAddr ∈  PKT ⇸ (ND ∪  {BROADCAST})"/>
+<org.eventb.core.invariant name="_Rfu8xpduEeS7UZUzQZNbaA" org.eventb.core.label="inv5_12" org.eventb.core.predicate="parent ∈ neighbourTbl →  (ND ∪  {BROADCAST})"/>
+<org.eventb.core.invariant name="_Rfu8x5duEeS7UZUzQZNbaA" org.eventb.core.label="inv5_13" org.eventb.core.predicate="cost ∈ neighbourTbl →ℕ"/>
+<org.eventb.core.invariant name="_Rfu8yJduEeS7UZUzQZNbaA" org.eventb.core.comment="@inv5_15 chooseParentFlg ∈ ND ∖ {Sink} → BOOL // @saf5_101 completedRoute = TRUE ⇒ dom(cRouteTree) = ND ∖ {Sink} // the route tree structure" org.eventb.core.label="inv5_14" org.eventb.core.predicate="deadNbrs ⊆ ND"/>
+<org.eventb.core.invariant name="_Rfu8yZduEeS7UZUzQZNbaA" org.eventb.core.comment="@saf5_102 ∀S · S ⊆  cRouteTree∼[S] ⇒ S = ∅&#10;     @saf5_103 completedRoute = TRUE ⇒ nodes = ND&#10;     theorem @mth1 ∀T·(Sink∈T ∧ cRouteTree∼[T] ⊆ T ⇒   nodes ⊆ T) // help to prove @mth3&#10;     theorem @mth2 nodes ⊆ {Sink} ∪ (tcl(cRouteTree))∼[{Sink}] // help to prove @mth3&#10;     theorem @mth3 nodes ∖ {Sink} ⊆ (tcl(cRouteTree))∼[{Sink}] // reachability property " org.eventb.core.label="inv5_16" org.eventb.core.predicate="chosenNDs ⊆ ND ∖ {Sink}"/>
+<org.eventb.core.event name="__En24JduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) starting broadcasting a data packet to a channel" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="start_tx_dataPkt_bct">
+<org.eventb.core.refinesEvent name="__Eod8JduEeS7UZUzQZNbaA" org.eventb.core.target="start_tx_dataPkt"/>
+<org.eventb.core.guard name="__Eod8ZduEeS7UZUzQZNbaA" org.eventb.core.label="g8" org.eventb.core.predicate="completedRoute = FALSE"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="__Eod8pduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) starting unicasting a data packet to a channel via route" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="start_tx_dataPkt_fwd">
+<org.eventb.core.refinesEvent name="__EpFAJduEeS7UZUzQZNbaA" org.eventb.core.target="start_tx_dataPkt"/>
+<org.eventb.core.parameter name="__EpFAZduEeS7UZUzQZNbaA" org.eventb.core.identifier="y"/>
+<org.eventb.core.guard name="__EpFApduEeS7UZUzQZNbaA" org.eventb.core.label="g8" org.eventb.core.predicate="completedRoute = TRUE"/>
+<org.eventb.core.guard name="__EpFA5duEeS7UZUzQZNbaA" org.eventb.core.label="g9" org.eventb.core.predicate="x ∈ dom( cRouteTree)"/>
+<org.eventb.core.guard name="__EpFBJduEeS7UZUzQZNbaA" org.eventb.core.label="g10" org.eventb.core.predicate="y =  cRouteTree(x)"/>
+<org.eventb.core.guard name="__EpsEJduEeS7UZUzQZNbaA" org.eventb.core.label="g11" org.eventb.core.predicate="pkt ∈ dom(pktDestAddr)"/>
+<org.eventb.core.action name="__EpsEZduEeS7UZUzQZNbaA" org.eventb.core.assignment="pktDestAddr ≔ pktDestAddr   {pkt ↦ y}" org.eventb.core.label="a6"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaQ" org.eventb.core.comment="(ctl) starting transmiting a beacon packet to a channel" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="start_tx_bconPkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="start_tx_bconPkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaR" org.eventb.core.comment="(ctl) starting transmiting a route packet to a channel" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="start_tx_routePkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="start_tx_routePkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaS" org.eventb.core.comment="(ctl) sending a packet down to a channel" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="send_down">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="send_down"/>
+<org.eventb.core.parameter name="__ETGxJduEeS7UZUzQZNbaA" org.eventb.core.identifier="dest"/>
+<org.eventb.core.guard name="__ETGxZduEeS7UZUzQZNbaA" org.eventb.core.label="g13" org.eventb.core.predicate="pkt ∈ dom(pktDestAddr) ∧ dest=pktDestAddr(pkt)"/>
+<org.eventb.core.guard name="__ETGxpduEeS7UZUzQZNbaA" org.eventb.core.label="g14" org.eventb.core.predicate="pkt ∉ dom(vPktDestAddr) ∧ dest ∈ ND ∪ {BROADCAST}"/>
+<org.eventb.core.action name="__ETGx5duEeS7UZUzQZNbaA" org.eventb.core.assignment="pktDestAddr ≔  {pkt} ⩤ pktDestAddr" org.eventb.core.label="a14"/>
+<org.eventb.core.action name="__ETGyJduEeS7UZUzQZNbaA" org.eventb.core.assignment="vPktDestAddr ≔ vPktDestAddr ∪ {pkt ↦ dest}" org.eventb.core.label="a15"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaT" org.eventb.core.comment="(env) channel finds the neighbour list of the forwarder" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="find_neighbours">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="find_neighbours"/>
+<org.eventb.core.parameter name="__ETGyZduEeS7UZUzQZNbaA" org.eventb.core.identifier="dest"/>
+<org.eventb.core.guard name="__ETGypduEeS7UZUzQZNbaA" org.eventb.core.label="g7" org.eventb.core.predicate="pkt ∈ dom(vPktDestAddr) ∧ dest=vPktDestAddr(pkt)"/>
+<org.eventb.core.guard name="__ETGy5duEeS7UZUzQZNbaA" org.eventb.core.label="g8" org.eventb.core.predicate="dest = BROADCAST"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaU" org.eventb.core.comment="(env) channel assigns specific forwarder" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="assign_forwarder">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="assign_forwarder"/>
+<org.eventb.core.parameter name="__ETGzJduEeS7UZUzQZNbaA" org.eventb.core.identifier="dest"/>
+<org.eventb.core.guard name="__ETGzZduEeS7UZUzQZNbaA" org.eventb.core.label="g7" org.eventb.core.predicate="pkt ∈ dom(vPktDestAddr) ∧ dest=vPktDestAddr(pkt)"/>
+<org.eventb.core.guard name="__ETGzpduEeS7UZUzQZNbaA" org.eventb.core.label="g8" org.eventb.core.predicate="dest ≠ BROADCAST"/>
+<org.eventb.core.guard name="__ETGz5duEeS7UZUzQZNbaA" org.eventb.core.label="g9" org.eventb.core.predicate="nb = dest"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaW" org.eventb.core.comment="(env) channel sends the neighbour information" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="send_up">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="send_up"/>
+<org.eventb.core.parameter name="__EZNYJduEeS7UZUzQZNbaA" org.eventb.core.identifier="dest"/>
+<org.eventb.core.guard name="__EZNYZduEeS7UZUzQZNbaA" org.eventb.core.label="g20" org.eventb.core.predicate="pkt ∈ dom(vPktDestAddr) ∧ dest = vPktDestAddr(pkt)"/>
+<org.eventb.core.guard name="__EZNYpduEeS7UZUzQZNbaA" org.eventb.core.label="g21" org.eventb.core.predicate="pkt ∉ dom(pktDestAddr)"/>
+<org.eventb.core.action name="__EZNY5duEeS7UZUzQZNbaA" org.eventb.core.assignment="vPktDestAddr ≔ vPktDestAddr ∖ {pkt↦dest }" org.eventb.core.label="a16"/>
+<org.eventb.core.action name="__EZNZJduEeS7UZUzQZNbaA" org.eventb.core.assignment="pktDestAddr ≔ pktDestAddr  ∪ {pkt  ↦dest}" org.eventb.core.label="a17"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaX" org.eventb.core.comment="(ctl) each neighbour node receives a data pacekt from a channel" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="receive_dataPkt">
+<org.eventb.core.refinesEvent name="_soW6QHzIEeW6cOyeQJkQoA" org.eventb.core.target="receive_dataPkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaY" org.eventb.core.comment="(ctl) each neighbour node receives a duplicated data packet from a channel" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="receive_dup_dataPkt">
+<org.eventb.core.refinesEvent name="_soXhUHzIEeW6cOyeQJkQoA" org.eventb.core.target="receive_dup_dataPkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaZ" org.eventb.core.comment="(ctl) each neighbour node receives a  control pacekt from a channel" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="receive_controlPkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="receive_controlPkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNba[" org.eventb.core.comment="(ctl) each neighbour node including sink receives a duplicated control packet from channel" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="receive_dup_controlPkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="receive_dup_controlPkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNba\" org.eventb.core.comment="(ctl) each neighbour node receives a data pacekt from channel" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="sink_recv_dataPkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="sink_recv_dataPkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNba]" org.eventb.core.comment="(ctl) sink receives a control packet" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="sink_recv_controlPkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="sink_recv_controlPkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNba^" org.eventb.core.comment="(ctl) add new entry into the neighbour table" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="add_newEntry">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="add_newEntry"/>
+<org.eventb.core.guard name="__EZNZ5duEeS7UZUzQZNbaA" org.eventb.core.label="g11" org.eventb.core.predicate="y ↦ x ↦ BROADCAST ∉ parent"/>
+<org.eventb.core.guard name="__EZNaJduEeS7UZUzQZNbaA" org.eventb.core.label="g12" org.eventb.core.predicate="(y ↦ x ↦ INFINITY ∉ cost) ∧ (x ≠ Sink)"/>
+<org.eventb.core.action name="__EZNaZduEeS7UZUzQZNbaA" org.eventb.core.assignment="parent ≔ parent  ∪  {y ↦ x ↦ BROADCAST}" org.eventb.core.label="a8"/>
+<org.eventb.core.action name="__EZNapduEeS7UZUzQZNbaA" org.eventb.core.assignment="cost ≔ cost ∪ {y↦x↦INFINITY}" org.eventb.core.label="a9"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="__EpsEpduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) add new entry into the neighbour table" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="add_newEntry_sink">
+<org.eventb.core.refinesEvent name="__EqTIJduEeS7UZUzQZNbaA" org.eventb.core.target="add_newEntry"/>
+<org.eventb.core.guard name="__EqTIZduEeS7UZUzQZNbaA" org.eventb.core.label="g11" org.eventb.core.predicate="y ↦ x ↦ BROADCAST ∉ parent"/>
+<org.eventb.core.guard name="__EqTIpduEeS7UZUzQZNbaA" org.eventb.core.label="g12" org.eventb.core.predicate="(y ↦ x ↦ 0 ∉ cost) ∧ (x = Sink)"/>
+<org.eventb.core.action name="__EqTI5duEeS7UZUzQZNbaA" org.eventb.core.assignment="parent ≔ parent  ∪  {y ↦ x ↦ BROADCAST}" org.eventb.core.label="a8"/>
+<org.eventb.core.action name="__EqTJJduEeS7UZUzQZNbaA" org.eventb.core.assignment="cost ≔ cost ∪ {y↦x↦0}" org.eventb.core.label="a9"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNba_" org.eventb.core.comment="(ctl) update receiving information into the neighbour table" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="update_nbr">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="update_nbr"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="__Eq6MJduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) updating information from route packet into the neighbour table (for sensor nodes)" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="update_route_1">
+<org.eventb.core.refinesEvent name="_pc9gAJdwEeS7UZUzQZNbaA" org.eventb.core.target="update_route"/>
+<org.eventb.core.parameter name="__Eq6MpduEeS7UZUzQZNbaA" org.eventb.core.identifier="par"/>
+<org.eventb.core.parameter name="__Eq6M5duEeS7UZUzQZNbaA" org.eventb.core.identifier="cst"/>
+<org.eventb.core.guard name="__ErhQJduEeS7UZUzQZNbaA" org.eventb.core.label="g10" org.eventb.core.predicate="x ∈ dom(cRouteTree) ∧ par = cRouteTree(x)"/>
+<org.eventb.core.guard name="__ErhQZduEeS7UZUzQZNbaA" org.eventb.core.label="g11" org.eventb.core.predicate="x ∈ dom(cpCost) ∧ cst = cpCost(x) ∧ cst ≠ INFINITY"/>
+<org.eventb.core.guard name="__ErhQpduEeS7UZUzQZNbaA" org.eventb.core.label="g12" org.eventb.core.predicate="y ↦ x ∈ dom(parent) ∧ y ↦ x ↦par ∉ parent"/>
+<org.eventb.core.guard name="__ErhQ5duEeS7UZUzQZNbaA" org.eventb.core.label="g13" org.eventb.core.predicate="y ↦ x ∈ dom(cost) ∧ y ↦ x ↦cst ∉ cost"/>
+<org.eventb.core.action name="__EsIUJduEeS7UZUzQZNbaA" org.eventb.core.assignment="parent ≔  parent    {y ↦ x ↦par}" org.eventb.core.label="a4"/>
+<org.eventb.core.action name="__EsIUZduEeS7UZUzQZNbaA" org.eventb.core.assignment="cost ≔  cost    {y ↦ x ↦cst}" org.eventb.core.label="a5"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="__EsIUpduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) updating information from route packet into the neighbour table (for a sink)" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="update_route_2">
+<org.eventb.core.refinesEvent name="__Eq6MZduEeS7UZUzQZNbaA" org.eventb.core.target="update_route"/>
+<org.eventb.core.guard name="__EsvYZduEeS7UZUzQZNbaA" org.eventb.core.label="g10" org.eventb.core.predicate="x ∉ dom(cRouteTree)"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaa" org.eventb.core.comment="(ctl) decreasing liveliness of each neighbour in neighbour table" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="decrease_liveliness">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="decrease_liveliness"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbab" org.eventb.core.comment="(ctl) excluding dead neighbour from  neighbour table" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="exclude_deadNbr">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="exclude_deadNbr"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbac" org.eventb.core.comment="(ctl) the link quality estimation timer due" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="est_due">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="est_due"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbad" org.eventb.core.comment="(cal) calculate and update reception ratio in case no lost packets or lose packets in the middle of transmission" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="update_est">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="update_est"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbae" org.eventb.core.comment="(ctl) for case the dead neighbour node affecting sentEst become zero" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="update_est_nothing">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="update_est_nothing"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbag" org.eventb.core.comment="(ctl) finishing packet transmission" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="finish_tx_pkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="finish_tx_pkt"/>
+</org.eventb.core.event>
+<org.eventb.core.variable name="_xPSgwpdYEeS7UZUzQZNbaj" org.eventb.core.comment="(ctl) list of neighbours" org.eventb.core.identifier="Nbrs"/>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbai" org.eventb.core.comment="(ctl) the transmitted packet is removed from middleware indicating completion of transmission mechanism" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="final_tx_controlPkt">
+<org.eventb.core.refinesEvent name="_FKp6MZpSEeS9D-NIy-9JrQ" org.eventb.core.target="final_tx_controlPkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="__EsvYpduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) choosing a parent period due" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="chooseParent_due">
+<org.eventb.core.refinesEvent name="__EtWcJduEeS7UZUzQZNbaA" org.eventb.core.target="reset_bcastRouTimer"/>
+<org.eventb.core.guard name="__EtWcZduEeS7UZUzQZNbaA" org.eventb.core.label="g3" org.eventb.core.predicate="chooseParentTimer = FALSE"/>
+<org.eventb.core.action name="__EtWcpduEeS7UZUzQZNbaA" org.eventb.core.assignment="chooseParentTimer ≔ TRUE" org.eventb.core.label="a3"/>
+<org.eventb.core.action name="__EtWc5duEeS7UZUzQZNbaA" org.eventb.core.assignment="deadNbrs ≔ ∅" org.eventb.core.label="t501"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="__Et9gZduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) choosing a node who has not chosen its parent yet" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="choose_node">
+<org.eventb.core.parameter name="__Et9gpduEeS7UZUzQZNbaA" org.eventb.core.identifier="x"/>
+<org.eventb.core.parameter name="__EukkJduEeS7UZUzQZNbaA" org.eventb.core.identifier="nb"/>
+<org.eventb.core.guard name="__EukkZduEeS7UZUzQZNbaA" org.eventb.core.label="g1" org.eventb.core.predicate="chooseParentTimer = TRUE"/>
+<org.eventb.core.guard name="__EukkpduEeS7UZUzQZNbaA" org.eventb.core.comment="@g3 x ∈ dom(neighbourTbl ▷ nodes) ∪ ran( nodes ◁ neighbourTbl)" org.eventb.core.label="g2" org.eventb.core.predicate="x ∈ ND ∖ {Sink}"/>
+<org.eventb.core.guard name="__Eukk5duEeS7UZUzQZNbaA" org.eventb.core.comment="x ∉ (Q ∪ deadNbrs1)" org.eventb.core.label="g3" org.eventb.core.predicate="x ∉ chosenNDs"/>
+<org.eventb.core.guard name="__EvLoJduEeS7UZUzQZNbaA" org.eventb.core.comment="@g7 nb = ran({x} ◁ nbTbl ▷ nodes) ∧ nb  ≠ ∅ // listing the neighbours of node x whose the link quality is gerater that threshold" org.eventb.core.label="g4" org.eventb.core.predicate="nb = ran({x} ◁  neighbourTbl) ∧ nb  ≠ ∅"/>
+<org.eventb.core.guard name="__EvLoZduEeS7UZUzQZNbaA" org.eventb.core.label="g5" org.eventb.core.predicate="Nbrs= ∅"/>
+<org.eventb.core.guard name="__EvLopduEeS7UZUzQZNbaA" org.eventb.core.label="g6" org.eventb.core.predicate="completedRoute = FALSE"/>
+<org.eventb.core.guard name="__EvLo5duEeS7UZUzQZNbaA" org.eventb.core.comment="@g12 x ∈ dom(chooseParentFlg) ∧ chooseParentFlg(x) = FALSE" org.eventb.core.label="g7" org.eventb.core.predicate="calPCostFlg = FALSE"/>
+<org.eventb.core.action name="__EvysJduEeS7UZUzQZNbaA" org.eventb.core.assignment="chosenNDs ≔ chosenNDs ∪ {x}" org.eventb.core.label="a1"/>
+<org.eventb.core.action name="__EvysZduEeS7UZUzQZNbaA" org.eventb.core.assignment="Nbrs ≔ nb" org.eventb.core.label="a2"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="__Evys5duEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) calculating path cost" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="cal_PCost_gt">
+<org.eventb.core.parameter name="__EwZwJduEeS7UZUzQZNbaA" org.eventb.core.identifier="x"/>
+<org.eventb.core.parameter name="__EwZwZduEeS7UZUzQZNbaA" org.eventb.core.identifier="nb"/>
+<org.eventb.core.parameter name="__ExA0pduEeS7UZUzQZNbaA" org.eventb.core.identifier="pCost"/>
+<org.eventb.core.parameter name="_XURAYJpREeS9D-NIy-9JrQ" org.eventb.core.identifier="Nbrs1"/>
+<org.eventb.core.parameter name="__ExA0JduEeS7UZUzQZNbaA" org.eventb.core.identifier="rEst"/>
+<org.eventb.core.parameter name="__ExA0ZduEeS7UZUzQZNbaA" org.eventb.core.identifier="sEst"/>
+<org.eventb.core.parameter name="_8IoAYJpOEeS9D-NIy-9JrQ" org.eventb.core.identifier="lnkQty"/>
+<org.eventb.core.parameter name="__ExA05duEeS7UZUzQZNbaA" org.eventb.core.identifier="th"/>
+<org.eventb.core.guard name="__ExA1JduEeS7UZUzQZNbaA" org.eventb.core.label="g1" org.eventb.core.predicate="x ∈ chosenNDs ∖ dom(cRouteTree) ∧ nb ∈ Nbrs"/>
+<org.eventb.core.guard name="__ExA1ZduEeS7UZUzQZNbaA" org.eventb.core.label="g2" org.eventb.core.predicate="th ∈ QThreshold"/>
+<org.eventb.core.guard name="__Exn4JduEeS7UZUzQZNbaA" org.eventb.core.label="g3" org.eventb.core.predicate="th &gt; 0 ∧ th = Qlow"/>
+<org.eventb.core.guard name="__Exn4pduEeS7UZUzQZNbaA" org.eventb.core.label="g4" org.eventb.core.predicate="x ↦nb   ∈ neighbourTbl"/>
+<org.eventb.core.guard name="__EyO8JduEeS7UZUzQZNbaA" org.eventb.core.label="g5" org.eventb.core.predicate="x ↦nb  ∈ dom(receiveEst) ∧  receiveEst(x ↦nb) ≥ th"/>
+<org.eventb.core.guard name="__EyO8ZduEeS7UZUzQZNbaA" org.eventb.core.label="g6" org.eventb.core.predicate="rEst ∈ ℕ ∧ rEst = receiveEst(x ↦ nb)"/>
+<org.eventb.core.guard name="__EyO8pduEeS7UZUzQZNbaA" org.eventb.core.label="g7" org.eventb.core.predicate="x ↦nb ∈ dom(sentEst) ∧  sentEst(x ↦nb) ≥ th"/>
+<org.eventb.core.guard name="__EyO85duEeS7UZUzQZNbaA" org.eventb.core.label="g8" org.eventb.core.predicate="sEst ∈ ℕ  ∧ sEst = sentEst(x ↦ nb)"/>
+<org.eventb.core.guard name="__Ey2AJduEeS7UZUzQZNbaA" org.eventb.core.label="g9" org.eventb.core.predicate="lnkQty ∈ ℕ ∧ lnkQty = ((120−rEst) ∗ (120−sEst))"/>
+<org.eventb.core.guard name="__Ey2AZduEeS7UZUzQZNbaA" org.eventb.core.label="g10" org.eventb.core.predicate="Nbrs1 = ran({x} ◁ neighbourTbl) ∧ Nbrs1 ≠ ∅"/>
+<org.eventb.core.guard name="__Ey2ApduEeS7UZUzQZNbaA" org.eventb.core.label="g11" org.eventb.core.predicate="pCost∈ ℕ"/>
+<org.eventb.core.guard name="__EzdEJduEeS7UZUzQZNbaA" org.eventb.core.label="g12" org.eventb.core.predicate="cpCost(nb) = pCost  ∧ pCost ≠ INFINITY"/>
+<org.eventb.core.guard name="__EzdEZduEeS7UZUzQZNbaA" org.eventb.core.label="g13" org.eventb.core.predicate="x ↦ nb ∉ calPCostNDs"/>
+<org.eventb.core.guard name="__EzdEpduEeS7UZUzQZNbaA" org.eventb.core.label="g14" org.eventb.core.predicate="pCost + lnkQty ≥ 0"/>
+<org.eventb.core.action name="__EzdE5duEeS7UZUzQZNbaA" org.eventb.core.assignment="calPCostNDs ≔  calPCostNDs ∪  {x↦nb}" org.eventb.core.label="a1"/>
+<org.eventb.core.action name="__E0EIJduEeS7UZUzQZNbaA" org.eventb.core.assignment="calPCost ≔ calPCost  ∪  {x ↦ nb↦ (pCost + lnkQty)}" org.eventb.core.label="a2"/>
+<org.eventb.core.action name="__E0EIZduEeS7UZUzQZNbaA" org.eventb.core.assignment="Nbrs ≔ Nbrs ∖ {nb}" org.eventb.core.label="a3"/>
+<org.eventb.core.action name="__E0EIpduEeS7UZUzQZNbaA" org.eventb.core.assignment="calPCostFlg ≔ TRUE" org.eventb.core.label="a4"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="__E0EI5duEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) skipping calculating path cost for the case that the node is further far away from the sink" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="cal_PCost_gt_skip">
+<org.eventb.core.parameter name="__E0rMJduEeS7UZUzQZNbaA" org.eventb.core.identifier="x"/>
+<org.eventb.core.parameter name="__E0rMZduEeS7UZUzQZNbaA" org.eventb.core.identifier="nb"/>
+<org.eventb.core.parameter name="__E0rMpduEeS7UZUzQZNbaA" org.eventb.core.identifier="m"/>
+<org.eventb.core.parameter name="_XUXHAJpREeS9D-NIy-9JrQ" org.eventb.core.identifier="Nbrs1"/>
+<org.eventb.core.parameter name="__E1SQJduEeS7UZUzQZNbaA" org.eventb.core.identifier="pREst"/>
+<org.eventb.core.parameter name="__E1SQZduEeS7UZUzQZNbaA" org.eventb.core.identifier="pSEst"/>
+<org.eventb.core.parameter name="__E1SQpduEeS7UZUzQZNbaA" org.eventb.core.identifier="pCost"/>
+<org.eventb.core.parameter name="__E1SQ5duEeS7UZUzQZNbaA" org.eventb.core.identifier="th"/>
+<org.eventb.core.guard name="__E1SRJduEeS7UZUzQZNbaA" org.eventb.core.label="g1" org.eventb.core.predicate="x  ∈ chosenNDs ∖ dom(cRouteTree)"/>
+<org.eventb.core.guard name="__E1SRZduEeS7UZUzQZNbaA" org.eventb.core.label="g2" org.eventb.core.predicate="th ∈ QThreshold"/>
+<org.eventb.core.guard name="__E15UJduEeS7UZUzQZNbaA" org.eventb.core.label="g3" org.eventb.core.predicate="th &gt; 0 ∧ th = Qlow"/>
+<org.eventb.core.guard name="__E15UZduEeS7UZUzQZNbaA" org.eventb.core.label="g4" org.eventb.core.predicate="nb ∈ Nbrs"/>
+<org.eventb.core.guard name="__E15UpduEeS7UZUzQZNbaA" org.eventb.core.label="g5" org.eventb.core.predicate="x ↦nb   ∈ neighbourTbl"/>
+<org.eventb.core.guard name="__E2gYJduEeS7UZUzQZNbaA" org.eventb.core.label="g6" org.eventb.core.predicate="x ↦nb  ∈ dom(receiveEst) ∧  receiveEst(x ↦nb) ≥ th"/>
+<org.eventb.core.guard name="__E2gYZduEeS7UZUzQZNbaA" org.eventb.core.label="g7" org.eventb.core.predicate="pREst ∈ ℕ ∧ pREst = receiveEst(x ↦ nb)"/>
+<org.eventb.core.guard name="__E2gYpduEeS7UZUzQZNbaA" org.eventb.core.label="g8" org.eventb.core.predicate="x ↦nb ∈ dom(sentEst) ∧  sentEst(x ↦nb) ≥ th"/>
+<org.eventb.core.guard name="__E2gY5duEeS7UZUzQZNbaA" org.eventb.core.label="g9" org.eventb.core.predicate="pSEst ∈ ℕ  ∧ pSEst = sentEst(x ↦ nb)"/>
+<org.eventb.core.guard name="__E3HcJduEeS7UZUzQZNbaA" org.eventb.core.label="g10" org.eventb.core.predicate="pCost ∈ ℕ ∧ pCost = ((120−pREst) ∗ (120−pSEst))"/>
+<org.eventb.core.guard name="__E3HcZduEeS7UZUzQZNbaA" org.eventb.core.label="g11" org.eventb.core.predicate="Nbrs1 = ran({x} ◁ neighbourTbl) ∧ Nbrs1 ≠ ∅"/>
+<org.eventb.core.guard name="__E3HcpduEeS7UZUzQZNbaA" org.eventb.core.label="g12" org.eventb.core.predicate="m ∈ ℕ"/>
+<org.eventb.core.guard name="__E3ugJduEeS7UZUzQZNbaA" org.eventb.core.label="g13" org.eventb.core.predicate="cpCost(nb) = m  ∧ m = INFINITY"/>
+<org.eventb.core.guard name="__E3ugZduEeS7UZUzQZNbaA" org.eventb.core.label="g14" org.eventb.core.predicate="x ↦ nb ∉ calPCostNDs"/>
+<org.eventb.core.guard name="__E3ugpduEeS7UZUzQZNbaA" org.eventb.core.label="g15" org.eventb.core.predicate="m + pCost ≥ 0"/>
+<org.eventb.core.action name="__E3ug5duEeS7UZUzQZNbaA" org.eventb.core.assignment="Nbrs ≔ Nbrs  ∖ {nb}" org.eventb.core.label="a1"/>
+<org.eventb.core.action name="__E4VkJduEeS7UZUzQZNbaA" org.eventb.core.assignment="calPCostFlg ≔ TRUE" org.eventb.core.label="a2"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="__E4VkZduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) skipping calculating path cost for the case that the neighbour node has the link quality less than the threshold" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="cal_PCost_le">
+<org.eventb.core.parameter name="__E4VkpduEeS7UZUzQZNbaA" org.eventb.core.identifier="x"/>
+<org.eventb.core.parameter name="__E4Vk5duEeS7UZUzQZNbaA" org.eventb.core.identifier="nb"/>
+<org.eventb.core.parameter name="__E48oJduEeS7UZUzQZNbaA" org.eventb.core.identifier="pREst"/>
+<org.eventb.core.parameter name="__E48oZduEeS7UZUzQZNbaA" org.eventb.core.identifier="th"/>
+<org.eventb.core.guard name="__E48opduEeS7UZUzQZNbaA" org.eventb.core.label="g1" org.eventb.core.predicate="x ∈ chosenNDs ∖ dom(cRouteTree)"/>
+<org.eventb.core.guard name="__E48o5duEeS7UZUzQZNbaA" org.eventb.core.label="g2" org.eventb.core.predicate="th ∈ QThreshold"/>
+<org.eventb.core.guard name="__E48pJduEeS7UZUzQZNbaA" org.eventb.core.label="g3" org.eventb.core.predicate="th &gt; 0 ∧ th = Qlow"/>
+<org.eventb.core.guard name="__E5jsJduEeS7UZUzQZNbaA" org.eventb.core.label="g4" org.eventb.core.predicate="nb ∈ Nbrs"/>
+<org.eventb.core.guard name="__E5jsZduEeS7UZUzQZNbaA" org.eventb.core.label="g5" org.eventb.core.predicate="x ↦nb   ∈ neighbourTbl"/>
+<org.eventb.core.guard name="__E5jspduEeS7UZUzQZNbaA" org.eventb.core.label="g6" org.eventb.core.predicate="x ↦nb  ∈ dom(receiveEst) ∧  x ↦nb ∈ dom(sentEst)"/>
+<org.eventb.core.guard name="__E6KwJduEeS7UZUzQZNbaA" org.eventb.core.label="g7" org.eventb.core.predicate="pREst ∈ ℕ ∧ pREst = receiveEst(x ↦ nb)"/>
+<org.eventb.core.guard name="__E6KwZduEeS7UZUzQZNbaA" org.eventb.core.label="g8" org.eventb.core.predicate="receiveEst(x ↦nb) &lt; th ∨ sentEst(x ↦nb) &lt; th"/>
+<org.eventb.core.action name="__E6KwpduEeS7UZUzQZNbaA" org.eventb.core.assignment="Nbrs ≔ Nbrs  ∖ {nb}" org.eventb.core.label="a1"/>
+<org.eventb.core.action name="__E6Kw5duEeS7UZUzQZNbaA" org.eventb.core.assignment="calPCostFlg ≔ TRUE" org.eventb.core.label="a42"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="__E6x0JduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) choosing a parent" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="choose_parent">
+<org.eventb.core.parameter name="__E6x0ZduEeS7UZUzQZNbaA" org.eventb.core.identifier="x"/>
+<org.eventb.core.parameter name="__E6x0pduEeS7UZUzQZNbaA" org.eventb.core.identifier="p"/>
+<org.eventb.core.parameter name="__E6x05duEeS7UZUzQZNbaA" org.eventb.core.identifier="m"/>
+<org.eventb.core.parameter name="_1BPQwHzIEeW6cOyeQJkQoA" org.eventb.core.identifier="des"/>
+<org.eventb.core.guard name="__E7Y45duEeS7UZUzQZNbaA" org.eventb.core.label="g1" org.eventb.core.predicate="x  ∈  ND ∖ {Sink}"/>
+<org.eventb.core.guard name="__E7_8JduEeS7UZUzQZNbaA" org.eventb.core.label="g2" org.eventb.core.predicate="x ∉ dom(cRouteTree)"/>
+<org.eventb.core.guard name="__E7_8ZduEeS7UZUzQZNbaA" org.eventb.core.label="g3" org.eventb.core.predicate="completedRoute = FALSE"/>
+<org.eventb.core.guard name="__E7_8pduEeS7UZUzQZNbaA" org.eventb.core.label="g4" org.eventb.core.predicate="x ∉ nodes"/>
+<org.eventb.core.guard name="__E7_85duEeS7UZUzQZNbaA" org.eventb.core.label="g5" org.eventb.core.predicate="Nbrs = ∅"/>
+<org.eventb.core.guard name="__E8nAJduEeS7UZUzQZNbaA" org.eventb.core.label="g6" org.eventb.core.predicate="ran(calPCost) ≠ ∅"/>
+<org.eventb.core.guard name="__E8nAZduEeS7UZUzQZNbaA" org.eventb.core.label="g7" org.eventb.core.predicate="m = min(ran(calPCost))"/>
+<org.eventb.core.guard name="__E8nApduEeS7UZUzQZNbaA" org.eventb.core.label="g8" org.eventb.core.predicate="p ∈ ran(dom(calPCost ▷ {m}))"/>
+<org.eventb.core.guard name="__E9OEJduEeS7UZUzQZNbaA" org.eventb.core.label="g9" org.eventb.core.predicate="x ↦ p ∈ calPCostNDs"/>
+<org.eventb.core.guard name="__E9OEZduEeS7UZUzQZNbaA" org.eventb.core.comment="@g12 ∀ S · S⊆(cRouteTree∪{x ↦p })∼[S] ⇒    S=∅" org.eventb.core.label="g10" org.eventb.core.predicate="calPCostFlg = TRUE"/>
+<org.eventb.core.guard name="__E9OEpduEeS7UZUzQZNbaA" org.eventb.core.label="g11" org.eventb.core.predicate="x ≠ p"/>
+<org.eventb.core.guard name="_soxxAHzIEeW6cOyeQJkQoA" org.eventb.core.label="g12" org.eventb.core.predicate="des ⊆ nodes"/>
+<org.eventb.core.guard name="_soxxAXzIEeW6cOyeQJkQoA" org.eventb.core.label="g13" org.eventb.core.predicate="p ∈ nodes ∧ p ∉ des ∪ {x}"/>
+<org.eventb.core.action name="__E91IJduEeS7UZUzQZNbaA" org.eventb.core.assignment="cRouteTree  ≔ cRouteTree ∪ {x ↦ p}" org.eventb.core.label="a1"/>
+<org.eventb.core.action name="__E91IZduEeS7UZUzQZNbaA" org.eventb.core.assignment="nodes ≔ nodes  ∪  {x}" org.eventb.core.label="a2"/>
+<org.eventb.core.action name="__E91IpduEeS7UZUzQZNbaA" org.eventb.core.assignment="cpCost(x) ≔ m" org.eventb.core.label="a4"/>
+<org.eventb.core.action name="__E91I5duEeS7UZUzQZNbaA" org.eventb.core.assignment="calPCostNDs ≔ ∅" org.eventb.core.label="a6"/>
+<org.eventb.core.action name="__E91JJduEeS7UZUzQZNbaA" org.eventb.core.assignment="calPCost ≔ ∅" org.eventb.core.label="a5"/>
+<org.eventb.core.action name="__E-cMJduEeS7UZUzQZNbaA" org.eventb.core.assignment="calPCostFlg ≔ FALSE" org.eventb.core.label="a7"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="__E-cMZduEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) skipping choosing parent for the case that all links have link quality lower than the quality threshold" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="choose_parent_skip">
+<org.eventb.core.parameter name="__E-cMpduEeS7UZUzQZNbaA" org.eventb.core.identifier="x"/>
+<org.eventb.core.parameter name="__E_DQJduEeS7UZUzQZNbaA" org.eventb.core.identifier="p"/>
+<org.eventb.core.parameter name="__E_DQZduEeS7UZUzQZNbaA" org.eventb.core.identifier="m"/>
+<org.eventb.core.guard name="__E_DQpduEeS7UZUzQZNbaA" org.eventb.core.label="typing_p" org.eventb.core.predicate="p ∈ ℤ"/>
+<org.eventb.core.guard name="__E_DQ5duEeS7UZUzQZNbaA" org.eventb.core.label="typing_m" org.eventb.core.predicate="m ∈ ℤ"/>
+<org.eventb.core.guard name="__E_DRJduEeS7UZUzQZNbaA" org.eventb.core.label="typing_x" org.eventb.core.predicate="x ∈ ℤ"/>
+<org.eventb.core.guard name="__E_qUJduEeS7UZUzQZNbaA" org.eventb.core.label="g1" org.eventb.core.predicate="x = x"/>
+<org.eventb.core.guard name="__E_qUZduEeS7UZUzQZNbaA" org.eventb.core.label="g2" org.eventb.core.predicate="p ∈ nodes"/>
+<org.eventb.core.guard name="__E_qUpduEeS7UZUzQZNbaA" org.eventb.core.label="g3" org.eventb.core.predicate="x  ∈  ND ∖ {Sink}"/>
+<org.eventb.core.guard name="__E_qU5duEeS7UZUzQZNbaA" org.eventb.core.label="g4" org.eventb.core.predicate="x ∉ dom(cRouteTree)"/>
+<org.eventb.core.guard name="__FARYJduEeS7UZUzQZNbaA" org.eventb.core.label="g5" org.eventb.core.predicate="completedRoute = FALSE"/>
+<org.eventb.core.guard name="__FARYZduEeS7UZUzQZNbaA" org.eventb.core.label="g6" org.eventb.core.predicate="Nbrs = ∅"/>
+<org.eventb.core.guard name="__FARYpduEeS7UZUzQZNbaA" org.eventb.core.label="g7" org.eventb.core.predicate="calPCostNDs = ∅"/>
+<org.eventb.core.guard name="__FA4cJduEeS7UZUzQZNbaA" org.eventb.core.label="g8" org.eventb.core.predicate="calPCostFlg = TRUE"/>
+<org.eventb.core.guard name="__FA4cZduEeS7UZUzQZNbaA" org.eventb.core.label="g9" org.eventb.core.predicate="x ∉ deadNbrs"/>
+<org.eventb.core.action name="__FA4cpduEeS7UZUzQZNbaA" org.eventb.core.assignment="calPCostFlg ≔ FALSE" org.eventb.core.label="a1"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="__FA4c5duEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) reporting the route completion" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="report_routeCompletion">
+<org.eventb.core.parameter name="__FBfgJduEeS7UZUzQZNbaA" org.eventb.core.identifier="r"/>
+<org.eventb.core.guard name="__FBfgZduEeS7UZUzQZNbaA" org.eventb.core.label="typing_r" org.eventb.core.predicate="r ∈ ℙ(ℤ × ℤ)"/>
+<org.eventb.core.guard name="__FBfgpduEeS7UZUzQZNbaA" org.eventb.core.label="g1" org.eventb.core.predicate="completedRoute = FALSE"/>
+<org.eventb.core.guard name="__FCGkJduEeS7UZUzQZNbaA" org.eventb.core.label="g2" org.eventb.core.predicate="r = cRouteTree"/>
+<org.eventb.core.guard name="__FCGkZduEeS7UZUzQZNbaA" org.eventb.core.comment="nodes =  ND" org.eventb.core.label="g4" org.eventb.core.predicate="Nbrs = ∅"/>
+<org.eventb.core.action name="__FCGkpduEeS7UZUzQZNbaA" org.eventb.core.assignment="completedRoute ≔ TRUE" org.eventb.core.label="a1"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_wymAwXvxEeW4jr5bQ_8NHA" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="reset_routeTimer">
+<org.eventb.core.guard name="_wymAwnvxEeW4jr5bQ_8NHA" org.eventb.core.label="g1" org.eventb.core.predicate="chooseParentTimer = TRUE"/>
+<org.eventb.core.guard name="__FCtopduEeS7UZUzQZNbaA" org.eventb.core.label="g4" org.eventb.core.predicate="chosenNDs ≠ ∅"/>
+<org.eventb.core.action name="_wymAw3vxEeW4jr5bQ_8NHA" org.eventb.core.assignment="chooseParentTimer ≔ FALSE" org.eventb.core.label="a2"/>
+<org.eventb.core.action name="__FDUsZduEeS7UZUzQZNbaA" org.eventb.core.assignment="chosenNDs ≔ ∅" org.eventb.core.label="a4"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="__FCGk5duEeS7UZUzQZNbaA" org.eventb.core.comment="(ctl) resetting the route tree" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="reset_route">
+<org.eventb.core.guard name="__FCtoJduEeS7UZUzQZNbaA" org.eventb.core.label="g1" org.eventb.core.predicate="completedRoute = TRUE"/>
+<org.eventb.core.guard name="_bUu2MCGKEeWBBdN5RKBVAg" org.eventb.core.label="g3" org.eventb.core.predicate="dom(cRouteTree) =  ND  ∖ {Sink}"/>
+<org.eventb.core.action name="__FDUsJduEeS7UZUzQZNbaA" org.eventb.core.assignment="completedRoute ≔ FALSE" org.eventb.core.label="a1"/>
+<org.eventb.core.action name="_bUu2MSGKEeWBBdN5RKBVAg" org.eventb.core.assignment="cRouteTree ≔ ∅" org.eventb.core.label="a2"/>
+<org.eventb.core.action name="_bUu2MiGKEeWBBdN5RKBVAg" org.eventb.core.assignment="nodes ≔ {Sink}" org.eventb.core.label="a3"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaV" org.eventb.core.comment="(env) channel loes all neighbours" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="lose_all_neighbours">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="lose_all_neighbours"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbaf" org.eventb.core.comment="(ctl) each node records a lost packet" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="lose_pkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="lose_pkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_xPSgwpdYEeS7UZUzQZNbak" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="final_tx_pkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="final_tx_pkt "/>
+</org.eventb.core.event>
+</org.eventb.core.machineFile>

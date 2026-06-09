@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<org.eventb.core.contextFile org.eventb.core.configuration="org.eventb.core.fwd;org.eventb.codegen.ui.cgConfig" org.eventb.texttools.text_lastmodified="1445861938650" org.eventb.texttools.text_representation="context T01 extends C4&#10;&#10;constants B1 B2 B3 B4 B5 B6 P1 P2 P3 P4 P5 P6 P7 P8 P9 P10 P11 P12 R0 R1 R2 R3 R4 R5 R6 R7 R8 R9 R10 R11 R12 R13 R14 R15 R16 R17 R18 R19 R20&#10;//ROUTE BEACON&#10;&#10;axioms&#10;  @test001 ND = {0, 1, 2, 3, 4, 5, 6} // @axm001-006 for animtation validation&#10;  //@axm301 partition(CONTROL, {ROUTE}, {BEACON})&#10;  @test002 Sink = 0 // assign a sink node to be zero&#10;  @axm004 partition(PKT, {B1}, {B2},{B3}, {B4}, {B5},{B6},&#10;          {P1}, {P2}, {P3}, {P4}, {P5}, {P6},&#10;          {P7},  {P8}, {P9}, {P10}, {P11}, {P12},&#10;          {R0}, {R1}, {R2}, {R3}, {R4},{R5}, {R6},&#10;          {R7}, {R8},{R9}, {R10}, {R11}, {R12},{R13},&#10;          {R14},{R15}, {R16},{R17},{R18}, {R19}, {R20})&#10;  @test005 initialSrcAddr = {B1 ↦ 0, B2 ↦0, B3 ↦0,B4 ↦0, B5 ↦0,B6 ↦0,&#10;           P1 ↦ 1, P2 ↦  2, P3 ↦  3, P4 ↦  4, P5 ↦  5, P6 ↦  6,&#10;           P7 ↦ 1, P8 ↦  2, P9 ↦  3, P10 ↦  4, P11 ↦  5, P12 ↦  6,&#10;           R0 ↦ 0, R1 ↦  1, R2 ↦ 2, R3 ↦  3, R4 ↦  4, R5 ↦  5, R6 ↦  6,&#10;           R7 ↦0, R8 ↦1, R9 ↦2, R10 ↦3, R11 ↦  4, R12 ↦  5, R13 ↦  6,&#10;           R14 ↦0, R15 ↦1, R16 ↦2, R17 ↦3, R18 ↦  4, R19 ↦  5, R20 ↦  6}&#10;/*  @test006 finalDestAddr = {B1 ↦ BROADCAST, B2 ↦BROADCAST, B3 ↦BROADCAST,B4 ↦BROADCAST, B5 ↦BROADCAST,B6 ↦BROADCAST,&#10;           P1 ↦ 0, P2 ↦  0, P3 ↦  0, P4 ↦  0, P5 ↦  0, P6 ↦  0,&#10;           P7 ↦ 0, P8 ↦ 0, P9 ↦  0, P10 ↦  0, P11 ↦  0, P12 ↦  0,&#10;           R0 ↦ BROADCAST, R1 ↦ BROADCAST, R2 ↦ BROADCAST, R3 ↦BROADCAST, R4 ↦BROADCAST , R5 ↦  BROADCAST, R6 ↦  BROADCAST,&#10;           R7 ↦BROADCAST, R8 ↦BROADCAST, R9 ↦BROADCAST, R10 ↦BROADCAST, R11 ↦BROADCAST, R12 ↦ BROADCAST, R13 ↦ BROADCAST,&#10;           R14 ↦BROADCAST, R15 ↦BROADCAST, R16 ↦BROADCAST,R17 ↦BROADCAST, R18 ↦BROADCAST,R19 ↦BROADCAST, R20 ↦BROADCAST}*/&#10;  @test007 type = {B1 ↦ BEACON, B2 ↦BEACON, B3 ↦BEACON,B4 ↦BEACON,B5 ↦BEACON,B6 ↦BEACON, P1 ↦ DATA, P2 ↦  DATA, P3 ↦  DATA, P4 ↦  DATA, P5 ↦  DATA, P6 ↦  DATA, P7 ↦ DATA, P8 ↦  DATA, P9 ↦  DATA, P10 ↦  DATA, P11 ↦  DATA, P12 ↦  DATA,&#10;           R0 ↦ ROUTE, R1 ↦ROUTE, R2 ↦  ROUTE, R3 ↦ROUTE, R4 ↦ROUTE, R5 ↦ROUTE, R6 ↦ROUTE,R7 ↦ ROUTE, R8 ↦ROUTE, R9 ↦  ROUTE, R10 ↦ROUTE,R11 ↦ ROUTE, R12 ↦ROUTE, R13 ↦  ROUTE, R14 ↦ROUTE,&#10;           R15 ↦ ROUTE, R16 ↦ROUTE, R17 ↦  ROUTE, R18 ↦ROUTE, R19 ↦  ROUTE, R20 ↦ROUTE&#10;           } // @axm005 type = {B1 ↦BEACON, B2 ↦BEACON,  P11 ↦ DATA, P21 ↦  DAT, P31 ↦  DAT, P7 ↦  DAT, P8 ↦  DAT, P9 ↦ DAT, ROU0 ↦ ROUTE, ROU1 ↦ROUTE, ROU2 ↦  ROUTE, ROU3 ↦ROUTE}&#10;  @test008 wsnTopology = {0 ↦ 2,2 ↦ 0,0 ↦ 3,3 ↦ 0, 2 ↦ 4,4 ↦ 2,2 ↦ 3,3 ↦ 2, 2 ↦ 1,1 ↦ 2, 3 ↦ 1,1 ↦ 3, 3 ↦ 5,5 ↦ 3, 4 ↦ 1,1 ↦ 4,5 ↦ 1,1 ↦ 5,4 ↦ 6,6 ↦ 4, 1 ↦ 6,6 ↦ 1, 5 ↦ 6,6 ↦ 5}&#10;  @test009 FAILED_XMIT = −1&#10;   @test010 EST_RATIO = 1&#10;  //@test011 LIVELINESS =1&#10;end&#10;" version="3">
+<org.eventb.core.extendsContext name="_JUITgHmaEeW9VIIkylVgtQ" org.eventb.core.target="C4"/>
+<org.eventb.core.constant name="_68XT0JZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="B1"/>
+<org.eventb.core.constant name="_68XT0ZZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="B2"/>
+<org.eventb.core.constant name="_68XT0pZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="B3"/>
+<org.eventb.core.constant name="_68XT05Z4EeSDW82aTOSJOQ" org.eventb.core.identifier="B4"/>
+<org.eventb.core.constant name="_68XT1JZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="B5"/>
+<org.eventb.core.constant name="_68XT1ZZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="B6"/>
+<org.eventb.core.constant name="_68XT1pZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="P1"/>
+<org.eventb.core.constant name="_68XT15Z4EeSDW82aTOSJOQ" org.eventb.core.identifier="P2"/>
+<org.eventb.core.constant name="_68XT2JZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="P3"/>
+<org.eventb.core.constant name="_68XT2ZZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="P4"/>
+<org.eventb.core.constant name="_68XT2pZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="P5"/>
+<org.eventb.core.constant name="_68dacJZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="P6"/>
+<org.eventb.core.constant name="_68dacZZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="P7"/>
+<org.eventb.core.constant name="_68dacpZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="P8"/>
+<org.eventb.core.constant name="_68dac5Z4EeSDW82aTOSJOQ" org.eventb.core.identifier="P9"/>
+<org.eventb.core.constant name="_68dadJZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="P10"/>
+<org.eventb.core.constant name="_68dadZZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="P11"/>
+<org.eventb.core.constant name="_68dadpZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="P12"/>
+<org.eventb.core.constant name="_68dad5Z4EeSDW82aTOSJOQ" org.eventb.core.identifier="R0"/>
+<org.eventb.core.constant name="_68daeJZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="R1"/>
+<org.eventb.core.constant name="_68daeZZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="R2"/>
+<org.eventb.core.constant name="_68daepZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="R3"/>
+<org.eventb.core.constant name="_68dae5Z4EeSDW82aTOSJOQ" org.eventb.core.identifier="R4"/>
+<org.eventb.core.constant name="_68dafJZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="R5"/>
+<org.eventb.core.constant name="_68dafZZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="R6"/>
+<org.eventb.core.constant name="_68dafpZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="R7"/>
+<org.eventb.core.constant name="_68daf5Z4EeSDW82aTOSJOQ" org.eventb.core.identifier="R8"/>
+<org.eventb.core.constant name="_68dagJZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="R9"/>
+<org.eventb.core.constant name="_68dagZZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="R10"/>
+<org.eventb.core.constant name="_68dagpZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="R11"/>
+<org.eventb.core.constant name="_68dag5Z4EeSDW82aTOSJOQ" org.eventb.core.identifier="R12"/>
+<org.eventb.core.constant name="_68dahJZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="R13"/>
+<org.eventb.core.constant name="_68dahZZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="R14"/>
+<org.eventb.core.constant name="_68dahpZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="R15"/>
+<org.eventb.core.constant name="_68dah5Z4EeSDW82aTOSJOQ" org.eventb.core.identifier="R16"/>
+<org.eventb.core.constant name="_68daiJZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="R17"/>
+<org.eventb.core.constant name="_68daiZZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="R18"/>
+<org.eventb.core.constant name="_68daipZ4EeSDW82aTOSJOQ" org.eventb.core.identifier="R19"/>
+<org.eventb.core.constant name="_68dai5Z4EeSDW82aTOSJOQ" org.eventb.core.comment="ROUTE BEACON" org.eventb.core.identifier="R20"/>
+<org.eventb.core.axiom name="_68daj5Z4EeSDW82aTOSJOQ" org.eventb.core.comment="@axm001-006 for animtation validation&#10;@axm301 partition(CONTROL, {ROUTE}, {BEACON})" org.eventb.core.label="test001" org.eventb.core.predicate="ND = {0, 1, 2, 3, 4, 5, 6}"/>
+<org.eventb.core.axiom name="_68dakJZ4EeSDW82aTOSJOQ" org.eventb.core.comment="assign a sink node to be zero" org.eventb.core.label="test002" org.eventb.core.predicate="Sink = 0"/>
+<org.eventb.core.axiom name="_68dakZZ4EeSDW82aTOSJOQ" org.eventb.core.label="axm004" org.eventb.core.predicate="partition(PKT, {B1}, {B2},{B3}, {B4}, {B5},{B6},&#10;          {P1}, {P2}, {P3}, {P4}, {P5}, {P6},&#10;          {P7},  {P8}, {P9}, {P10}, {P11}, {P12},&#10;          {R0}, {R1}, {R2}, {R3}, {R4},{R5}, {R6},&#10;          {R7}, {R8},{R9}, {R10}, {R11}, {R12},{R13},&#10;          {R14},{R15}, {R16},{R17},{R18}, {R19}, {R20})"/>
+<org.eventb.core.axiom name="_68dakpZ4EeSDW82aTOSJOQ" org.eventb.core.comment="@test006 finalDestAddr = {B1 ↦ BROADCAST, B2 ↦BROADCAST, B3 ↦BROADCAST,B4 ↦BROADCAST, B5 ↦BROADCAST,B6 ↦BROADCAST,&#10;           P1 ↦ 0, P2 ↦  0, P3 ↦  0, P4 ↦  0, P5 ↦  0, P6 ↦  0,&#10;           P7 ↦ 0, P8 ↦ 0, P9 ↦  0, P10 ↦  0, P11 ↦  0, P12 ↦  0,&#10;           R0 ↦ BROADCAST, R1 ↦ BROADCAST, R2 ↦ BROADCAST, R3 ↦BROADCAST, R4 ↦BROADCAST , R5 ↦  BROADCAST, R6 ↦  BROADCAST,&#10;           R7 ↦BROADCAST, R8 ↦BROADCAST, R9 ↦BROADCAST, R10 ↦BROADCAST, R11 ↦BROADCAST, R12 ↦ BROADCAST, R13 ↦ BROADCAST,&#10;           R14 ↦BROADCAST, R15 ↦BROADCAST, R16 ↦BROADCAST,R17 ↦BROADCAST, R18 ↦BROADCAST,R19 ↦BROADCAST, R20 ↦BROADCAST}" org.eventb.core.label="test005" org.eventb.core.predicate="initialSrcAddr = {B1 ↦ 0, B2 ↦0, B3 ↦0,B4 ↦0, B5 ↦0,B6 ↦0,&#10;           P1 ↦ 1, P2 ↦  2, P3 ↦  3, P4 ↦  4, P5 ↦  5, P6 ↦  6,&#10;           P7 ↦ 1, P8 ↦  2, P9 ↦  3, P10 ↦  4, P11 ↦  5, P12 ↦  6,&#10;           R0 ↦ 0, R1 ↦  1, R2 ↦ 2, R3 ↦  3, R4 ↦  4, R5 ↦  5, R6 ↦  6,&#10;           R7 ↦0, R8 ↦1, R9 ↦2, R10 ↦3, R11 ↦  4, R12 ↦  5, R13 ↦  6,&#10;           R14 ↦0, R15 ↦1, R16 ↦2, R17 ↦3, R18 ↦  4, R19 ↦  5, R20 ↦  6}"/>
+<org.eventb.core.axiom name="_68dalJZ4EeSDW82aTOSJOQ" org.eventb.core.comment="@axm005 type = {B1 ↦BEACON, B2 ↦BEACON,  P11 ↦ DATA, P21 ↦  DAT, P31 ↦  DAT, P7 ↦  DAT, P8 ↦  DAT, P9 ↦ DAT, ROU0 ↦ ROUTE, ROU1 ↦ROUTE, ROU2 ↦  ROUTE, ROU3 ↦ROUTE}" org.eventb.core.label="test007" org.eventb.core.predicate="type = {B1 ↦ BEACON, B2 ↦BEACON, B3 ↦BEACON,B4 ↦BEACON,B5 ↦BEACON,B6 ↦BEACON, P1 ↦ DATA, P2 ↦  DATA, P3 ↦  DATA, P4 ↦  DATA, P5 ↦  DATA, P6 ↦  DATA, P7 ↦ DATA, P8 ↦  DATA, P9 ↦  DATA, P10 ↦  DATA, P11 ↦  DATA, P12 ↦  DATA,&#10;           R0 ↦ ROUTE, R1 ↦ROUTE, R2 ↦  ROUTE, R3 ↦ROUTE, R4 ↦ROUTE, R5 ↦ROUTE, R6 ↦ROUTE,R7 ↦ ROUTE, R8 ↦ROUTE, R9 ↦  ROUTE, R10 ↦ROUTE,R11 ↦ ROUTE, R12 ↦ROUTE, R13 ↦  ROUTE, R14 ↦ROUTE,&#10;           R15 ↦ ROUTE, R16 ↦ROUTE, R17 ↦  ROUTE, R18 ↦ROUTE, R19 ↦  ROUTE, R20 ↦ROUTE&#10;           }"/>
+<org.eventb.core.axiom name="_VP-M4JatEeSDW82aTOSJOQ" org.eventb.core.label="test008" org.eventb.core.predicate="wsnTopology = {0 ↦ 2,2 ↦ 0,0 ↦ 3,3 ↦ 0, 2 ↦ 4,4 ↦ 2,2 ↦ 3,3 ↦ 2, 2 ↦ 1,1 ↦ 2, 3 ↦ 1,1 ↦ 3, 3 ↦ 5,5 ↦ 3, 4 ↦ 1,1 ↦ 4,5 ↦ 1,1 ↦ 5,4 ↦ 6,6 ↦ 4, 1 ↦ 6,6 ↦ 1, 5 ↦ 6,6 ↦ 5}"/>
+<org.eventb.core.axiom name="_68dalZZ4EeSDW82aTOSJOQ" org.eventb.core.label="test009" org.eventb.core.predicate="FAILED_XMIT = −1"/>
+<org.eventb.core.axiom name="_JWbUAHvTEeWAP_VoIyV-ZA" org.eventb.core.comment="@test011 LIVELINESS =1" org.eventb.core.label="test010" org.eventb.core.predicate="EST_RATIO = 1"/>
+</org.eventb.core.contextFile>
