@@ -132,4 +132,38 @@ export const RULES: Rule[] = [
   { id: "A1", tier: "aux", provenance: "raw-XML",
     match: re(/^card\((?<S>\w+)\)$/),
     emit: (m) => `${m.captures.S}.size()` },
+
+  // ── Extended executable forms (A6–A10) ─────────────────────────────────
+  // These cover the common single-clause guards/actions the frozen R1–R20
+  // catalog left unhandled. They are matched per-conjunct by the rule engine,
+  // which first skips pure typing predicates (x ∈ CARRIER), so a bare RHS here
+  // is always a machine variable.
+  //
+  // A7 plain function application (non-pair): y = f(x)   — distinct from R18's
+  // pair-keyed f(x↦s). A map-of-sets f yields a set; otherwise a scalar.
+  { id: "A7", tier: "aux", provenance: "raw-XML",
+    match: re(/^(?<y>\w+)\s*=\s*(?<f>\w+)\((?<x>\w+)\)$/),
+    emit: (m, enc) => enc(m.captures.f) === "map-of-sets"
+      ? `const std::set<int>& ${m.captures.y} = ${m.captures.f}.at(${m.captures.x});`
+      : `int ${m.captures.y} = ${m.captures.f}.at(${m.captures.x});` },
+  // A8 single-table domain membership: x ∈ dom(R) / x ∉ dom(R)  — distinct from
+  // R2 (pair x↦s ∈ dom(R)) and R12 (dom over a union).
+  { id: "A8", tier: "aux", provenance: "raw-XML",
+    match: re(/^(?<x>\w+)\s*(?<op>∈|∉)\s*dom\((?<R>\w+)\)$/),
+    emit: (m, enc) => enc(m.captures.R) === "pair-set"
+      ? `${m.captures.op === "∉" ? "!" : ""}eb_in_dom_pairset(${m.captures.R}, ${m.captures.x})`
+      : `${m.captures.R}.count(${m.captures.x}) ${m.captures.op === "∈" ? "> 0" : "== 0"}` },
+  // A6 bare set membership: x ∈ S / x ∉ S  (S a machine-variable set/relation).
+  { id: "A6", tier: "aux", provenance: "raw-XML",
+    match: re(/^(?<x>\w+)\s*(?<op>∈|∉)\s*(?<S>\w+)$/),
+    emit: (m) => `${m.captures.S}.count(${m.captures.x}) ${m.captures.op === "∈" ? "> 0" : "== 0"}` },
+  // A9 reset to empty: X ≔ ∅
+  { id: "A9", tier: "aux", provenance: "raw-XML",
+    match: re(/^(?<X>\w+)\s*≔\s*∅$/),
+    emit: (m) => `${m.captures.X}.clear();` },
+  // A10 total map-of-sets init: X ≔ A × {∅}  (every key maps to ∅; std::map
+  // yields the empty default lazily, so clear() is the faithful translation).
+  { id: "A10", tier: "aux", provenance: "raw-XML",
+    match: re(/^(?<X>\w+)\s*≔\s*(?<A>\w+)\s*×\s*\{\s*∅\s*\}$/),
+    emit: (m) => `${m.captures.X}.clear();` },
 ];

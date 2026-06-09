@@ -8,6 +8,16 @@
 #include <set>
 #include <utility>
 
+// ─── Constant-function accessors ───────────────────────────────────────────
+// The Event-B constant function `type ∈ PKT → TYPE` has no machine-variable
+// storage, so rule R1 (type(x) ∈ S) needs a free accessor. Packet type is held
+// in this registry; project Phase 4 populates it when packets are constructed.
+inline std::map<int, int>& ebPacketTypes() { static std::map<int, int> t; return t; }
+inline int getType(int pkt) {                                            // R1
+  auto it = ebPacketTypes().find(pkt);
+  return it != ebPacketTypes().end() ? it->second : -1;
+}
+
 // ─── Function-form helpers (std::map<K, V>) ────────────────────────────────
 template <typename K, typename V>
 bool eb_in_range(const std::map<K, V>& R, const V& x) {                  // A3
