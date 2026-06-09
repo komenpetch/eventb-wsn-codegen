@@ -21,8 +21,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8 font-mono">
-      <h1 className="text-xl font-bold mb-4">eventb-wsn-codegen</h1>
+    <div className="min-h-screen bg-gray-50 text-gray-900 p-8 font-mono">
+      <h1 className="text-xl font-bold mb-4 text-gray-900">eventb-wsn-codegen</h1>
       <button onClick={run} className="px-4 py-2 bg-blue-600 text-white rounded">
         Pick Event-B folder → Generate
       </button>
