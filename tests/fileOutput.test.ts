@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { writeTree } from "../src/io/fileOutput";
+import JSZip from "jszip";
+import { writeTree, readZip } from "../src/io/fileOutput";
 
 // writeTree has two output paths the user can hit depending on the browser:
 // the File System Access folder write (Chrome/Edge) and the zip download
-// fallback (Firefox/Safari/mobile). Exercise both against the real function,
-// stubbing only the browser-native showDirectoryPicker boundary.
+// fallback (Firefox/Safari/mobile). readZip is the symmetric input path: read
+// a Rodin project that has been zipped. Exercise all of them against the real
+// functions, stubbing only the browser-native showDirectoryPicker boundary.
 
 interface PickerWindow {
   showDirectoryPicker?: unknown;
@@ -62,5 +64,39 @@ describe("writeTree output paths", () => {
 
     expect(mode).toBe("zip");
     expect(downloads).toEqual(["generated-cpp.zip"]);
+  });
+});
+
+describe("readZip input path", () => {
+  async function makeZip(entries: Record<string, string>): Promise<File> {
+    const zip = new JSZip();
+    for (const [path, content] of Object.entries(entries)) zip.file(path, content);
+    const buf = await zip.generateAsync({ type: "arraybuffer" });
+    return new File([buf], "project.zip", { type: "application/zip" });
+  }
+
+  it("extracts .bum/.buc entries (recursively) and ignores other files", async () => {
+    const file = await makeZip({
+      "WBAN/M0.bum": "<machine0/>",
+      "WBAN/C0.buc": "<context0/>",
+      "WBAN/notes.txt": "ignore me",
+      "README.md": "ignore me too",
+    });
+
+    const files = await readZip(file);
+
+    expect(files).toEqual(
+      expect.arrayContaining([
+        { name: "M0.bum", xml: "<machine0/>" },
+        { name: "C0.buc", xml: "<context0/>" },
+      ]),
+    );
+    expect(files).toHaveLength(2);
+    expect(files.some((f) => f.name.endsWith(".txt") || f.name.endsWith(".md"))).toBe(false);
+  });
+
+  it("returns no files for a zip with no Event-B models", async () => {
+    const file = await makeZip({ "docs/readme.txt": "nothing here" });
+    expect(await readZip(file)).toEqual([]);
   });
 });

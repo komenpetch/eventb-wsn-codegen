@@ -72,6 +72,22 @@ function readFolderViaInput(): Promise<{ name: string; xml: string }[]> {
   });
 }
 
+// Read a zipped Rodin project (the "Pick .zip" button or a drag-and-drop). Pull
+// every .bum/.buc entry from anywhere in the archive and return the same
+// {name (basename), xml} shape as readFolder, so the pipeline downstream is
+// identical regardless of whether the input was a folder or a zip.
+export async function readZip(file: Blob): Promise<{ name: string; xml: string }[]> {
+  const zip = await JSZip.loadAsync(file);
+  const files: { name: string; xml: string }[] = [];
+  for (const entry of Object.values(zip.files)) {
+    if (!entry.dir && /\.(bum|buc)$/i.test(entry.name)) {
+      const base = entry.name.slice(entry.name.lastIndexOf("/") + 1);
+      files.push({ name: base, xml: await entry.async("string") });
+    }
+  }
+  return files;
+}
+
 export async function writeTree(tree: VirtualFileTree): Promise<"folder" | "zip"> {
   if (fsWindow.showDirectoryPicker) {
     const dir = await fsWindow.showDirectoryPicker({ mode: "readwrite" });
