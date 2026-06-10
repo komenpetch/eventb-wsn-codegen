@@ -8,11 +8,27 @@ const CPP: Record<EncodingForm, string> = {
   "pair-set": "std::set<std::pair<int,int>>",
 };
 
-export function emit(model: EncodedModel, _frags: Fragment[]): VirtualFileTree {
+export function emit(model: EncodedModel, frags: Fragment[]): VirtualFileTree {
   const p = model.protocol;
   const lower = p.toLowerCase();
   const fields = [...model.encodings.entries()]
     .map(([id, form]) => `  ${CPP[form]} ${id};`).join("\n");
+
+  // Surface the pattern-matcher and rule-engine output in the generated .cc so
+  // it is not silently discarded: a one-line pattern summary plus the distinct
+  // translated guard/action fragments as reference for the M4-M6 hand-completion.
+  const pat = model.patterns;
+  const patternLine =
+    `// Detected patterns - CommPattern(packets: ${pat.comm.packetVars.join(", ") || "none"}` +
+    `${pat.comm.floodTableVar ? `, flood: ${pat.comm.floodTableVar}` : ""}); ` +
+    `RouteTable: ${pat.route ? `${pat.route.kind} (${pat.route.tableVars.join(", ")})` : "none"}; ` +
+    `ENVPattern(link: ${pat.env.linkVar ?? "none"}, neighbours: ${pat.env.neighbourVars.join(", ") || "none"}).`;
+  const distinctFrags = [...new Map(frags.map((f) => [f.cpp, f])).values()];
+  const fragmentBlock = distinctFrags.length
+    ? "\n// --- Translated guard/action fragments (rule catalog R*/A*) ---------------\n" +
+      "// Reference C++ for the M4-M6 imperative bodies (project Phase 4 hand-completion).\n" +
+      distinctFrags.map((f) => `//   [${f.rule}] ${f.sourceExpr}  =>  ${f.cpp}`).join("\n") + "\n"
+    : "";
 
   // NetworkProtocolBase leaves getProtocol() pure virtual, and OperationalMixin
   // (via LayeredProtocolBase) leaves handleStartOperation/Stop/Crash pure
@@ -53,6 +69,8 @@ ${fields}
   const source = `#include "${p}.h"
 #include "inet/common/Protocol.h"
 
+${patternLine}
+
 Define_Module(${p});
 
 static const Protocol ${lower}Protocol("${lower}", "${p}", Protocol::NetworkLayer);
@@ -62,7 +80,7 @@ const Protocol& ${p}::getProtocol() const { return ${lower}Protocol; }
 void ${p}::initialize(int stage) { NetworkProtocolBase::initialize(stage); }
 void ${p}::handleUpperPacket(Packet *packet) { /* M4-M6 event bodies: project Phase 4 */ }
 void ${p}::handleLowerPacket(Packet *packet) { /* M4-M6 event bodies: project Phase 4 */ }
-`;
+${fragmentBlock}`;
 
   // Extending NetworkProtocolBase inherits its transportIn/transportOut and
   // queueIn/queueOut gates plus the required interfaceTableModule parameter;

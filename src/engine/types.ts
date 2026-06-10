@@ -57,6 +57,7 @@ export interface EnvBinding { linkVar?: string; neighbourVars: string[]; }
 export type EncodingForm = "function" | "pair-keyed" | "map-of-sets" | "pair-set";
 export interface EncodedModel extends ResolvedModel {
   encodings: Map<string, EncodingForm>;      // identifier → chosen C++ container form
+  patterns: DetectedPatterns;                // detected CommPattern/RouteTable/ENVPattern bindings
 }
 
 // ── Stage 5: RuleEngine output ──────────────────────────────────────────

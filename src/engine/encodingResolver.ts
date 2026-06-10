@@ -11,12 +11,12 @@ const SEED: Record<string, EncodingForm> = {
   bwdRouteTbl: "pair-set", fwdRouteTbl: "pair-set", sentUp: "pair-set", sentDown: "pair-set",
 };
 
-export function resolveEncodings(model: ResolvedModel, _patterns: DetectedPatterns): EncodedModel {
+export function resolveEncodings(model: ResolvedModel, patterns: DetectedPatterns): EncodedModel {
   const encodings = new Map<string, EncodingForm>();
   for (const [id, invariant] of model.variableTypes) {
     encodings.set(id, SEED[id] ?? infer(id, invariant, model));
   }
-  return { ...model, encodings };
+  return { ...model, encodings, patterns };
 }
 
 function infer(id: string, invariant: string, model: ResolvedModel): EncodingForm {
