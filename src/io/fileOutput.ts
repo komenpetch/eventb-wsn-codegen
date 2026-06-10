@@ -2,16 +2,34 @@ import JSZip from "jszip";
 import type { VirtualFileTree } from "../engine/types";
 
 // The File System Access API (showDirectoryPicker / createWritable) is not in
-// the standard TypeScript DOM lib, so it is reached through a narrow `any` view
-// of `window`. Runtime behavior is the browser-native API; the casts only quiet
-// the type checker for the non-standard surface.
+// the standard TypeScript DOM lib, so the minimal surface used here is declared
+// locally. Runtime behavior is the browser-native API.
+interface FsWritable {
+  write(data: string): Promise<void>;
+  close(): Promise<void>;
+}
+interface FsFileHandle {
+  kind: "file";
+  getFile(): Promise<File>;
+  createWritable(): Promise<FsWritable>;
+}
+interface FsDirHandle {
+  kind: "directory";
+  getFileHandle(name: string, options?: { create?: boolean }): Promise<FsFileHandle>;
+  entries(): AsyncIterableIterator<[string, FsFileHandle | FsDirHandle]>;
+}
+type ShowDirectoryPicker = (options?: { mode?: "read" | "readwrite" }) => Promise<FsDirHandle>;
+
+// Truthy feature-detect rather than `"showDirectoryPicker" in window`: a stub or
+// polyfill that sets the property to undefined must still fall back, not throw.
+const fsWindow = window as unknown as { showDirectoryPicker?: ShowDirectoryPicker };
 
 export async function readFolder(): Promise<{ name: string; xml: string }[]> {
   // Chrome/Edge: native directory picker. Everything else (Firefox, Safari,
   // mobile) has no showDirectoryPicker, so fall back to a hidden
   // <input webkitdirectory> — same feature-detect shape writeTree uses.
-  if ("showDirectoryPicker" in window) {
-    const dir: any = await (window as any).showDirectoryPicker();
+  if (fsWindow.showDirectoryPicker) {
+    const dir = await fsWindow.showDirectoryPicker();
     const files: { name: string; xml: string }[] = [];
     for await (const [name, handle] of dir.entries()) {
       if (handle.kind === "file" && /\.(bum|buc)$/.test(name)) {
@@ -34,7 +52,7 @@ function readFolderViaInput(): Promise<{ name: string; xml: string }[]> {
     input.type = "file";
     input.multiple = true;
     // webkitdirectory is non-standard and absent from the input lib types.
-    (input as any).webkitdirectory = true;
+    (input as HTMLInputElement & { webkitdirectory: boolean }).webkitdirectory = true;
     input.oncancel = () => resolve([]);
     input.onchange = async () => {
       try {
@@ -55,8 +73,8 @@ function readFolderViaInput(): Promise<{ name: string; xml: string }[]> {
 }
 
 export async function writeTree(tree: VirtualFileTree): Promise<"folder" | "zip"> {
-  if ("showDirectoryPicker" in window) {
-    const dir: any = await (window as any).showDirectoryPicker({ mode: "readwrite" });
+  if (fsWindow.showDirectoryPicker) {
+    const dir = await fsWindow.showDirectoryPicker({ mode: "readwrite" });
     for (const f of tree) {
       const handle = await dir.getFileHandle(f.path, { create: true });
       const w = await handle.createWritable();

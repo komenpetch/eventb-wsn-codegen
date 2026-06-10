@@ -3,6 +3,11 @@ import type { RawModel, RawMachine, RawContext, RawEvent, Labelled } from "./typ
 
 const EB = "org.eventb.core.";
 
+// fast-xml-parser returns untyped objects keyed by EB element/attribute name.
+// A value is either an attribute string, a single child node, or an array of
+// child nodes (for the element types forced to arrays below).
+type XmlNode = { [key: string]: string | XmlNode | XmlNode[] | undefined };
+
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "",
@@ -19,6 +24,14 @@ function asArray<T>(v: T | T[] | undefined): T[] {
   return v === undefined ? [] : Array.isArray(v) ? v : [v];
 }
 
+// Typed readers over the untyped node shape: `attr` pulls an attribute string,
+// `childNode` a single child element, `nodes` a (possibly forced) array of them.
+const attr = (n: XmlNode, key: string): string => n[key] as string;
+const childNode = (n: XmlNode, key: string): XmlNode | undefined =>
+  n[key] as XmlNode | undefined;
+const nodes = (n: XmlNode, key: string): XmlNode[] =>
+  asArray<XmlNode>(n[key] as XmlNode | XmlNode[] | undefined);
+
 function baseName(fileName: string): string {
   return fileName.replace(/\.(bum|buc)$/i, "");
 }
@@ -28,51 +41,53 @@ export function parseModel(files: { name: string; xml: string }[]): RawModel {
   const contexts: RawContext[] = [];
 
   for (const { name, xml } of files) {
-    const root = parser.parse(xml);
-    if (root[`${EB}machineFile`]) {
-      machines.push(parseMachine(baseName(name), root[`${EB}machineFile`]));
-    } else if (root[`${EB}contextFile`]) {
-      contexts.push(parseContext(baseName(name), root[`${EB}contextFile`]));
+    const root = parser.parse(xml) as XmlNode;
+    const machineFile = childNode(root, `${EB}machineFile`);
+    const contextFile = childNode(root, `${EB}contextFile`);
+    if (machineFile) {
+      machines.push(parseMachine(baseName(name), machineFile));
+    } else if (contextFile) {
+      contexts.push(parseContext(baseName(name), contextFile));
     }
     // NB: we read root[...] children only; the text_representation attribute is never touched.
   }
   return { machines, contexts };
 }
 
-function parseMachine(name: string, node: any): RawMachine {
-  const refinesNode = node[`${EB}refinesMachine`];
+function parseMachine(name: string, node: XmlNode): RawMachine {
+  const refinesNode = childNode(node, `${EB}refinesMachine`);
   return {
     name,
-    refines: refinesNode ? refinesNode[`${EB}target`] : undefined,
-    sees: asArray(node[`${EB}seesContext`]).map((s: any) => s[`${EB}target`]),
-    variables: asArray(node[`${EB}variable`]).map((v: any) => v[`${EB}identifier`]),
-    invariants: asArray(node[`${EB}invariant`]).map(labelPred),
-    events: asArray(node[`${EB}event`]).map(parseEvent),
+    refines: refinesNode ? attr(refinesNode, `${EB}target`) : undefined,
+    sees: nodes(node, `${EB}seesContext`).map((s) => attr(s, `${EB}target`)),
+    variables: nodes(node, `${EB}variable`).map((v) => attr(v, `${EB}identifier`)),
+    invariants: nodes(node, `${EB}invariant`).map(labelPred),
+    events: nodes(node, `${EB}event`).map(parseEvent),
   };
 }
 
-function parseEvent(node: any): RawEvent {
-  const refinesNode = asArray(node[`${EB}refinesEvent`])[0];
+function parseEvent(node: XmlNode): RawEvent {
+  const refinesNode = nodes(node, `${EB}refinesEvent`)[0];
   return {
-    label: node[`${EB}label`],
-    refines: refinesNode ? refinesNode[`${EB}target`] : undefined,
+    label: attr(node, `${EB}label`),
+    refines: refinesNode ? attr(refinesNode, `${EB}target`) : undefined,
     extended: node[`${EB}extended`] === "true",
-    parameters: asArray(node[`${EB}parameter`]).map((p: any) => p[`${EB}identifier`]),
-    guards: asArray(node[`${EB}guard`]).map(labelPred),
-    actions: asArray(node[`${EB}action`]).map(labelAssign),
+    parameters: nodes(node, `${EB}parameter`).map((p) => attr(p, `${EB}identifier`)),
+    guards: nodes(node, `${EB}guard`).map(labelPred),
+    actions: nodes(node, `${EB}action`).map(labelAssign),
   };
 }
 
-function parseContext(name: string, node: any): RawContext {
-  const extNode = node[`${EB}extendsContext`];
+function parseContext(name: string, node: XmlNode): RawContext {
+  const extNode = childNode(node, `${EB}extendsContext`);
   return {
     name,
-    extendsCtx: extNode ? extNode[`${EB}target`] : undefined,
-    sets: asArray(node[`${EB}carrierSet`]).map((s: any) => s[`${EB}identifier`]),
-    constants: asArray(node[`${EB}constant`]).map((c: any) => c[`${EB}identifier`]),
-    axioms: asArray(node[`${EB}axiom`]).map(labelPred),
+    extendsCtx: extNode ? attr(extNode, `${EB}target`) : undefined,
+    sets: nodes(node, `${EB}carrierSet`).map((s) => attr(s, `${EB}identifier`)),
+    constants: nodes(node, `${EB}constant`).map((c) => attr(c, `${EB}identifier`)),
+    axioms: nodes(node, `${EB}axiom`).map(labelPred),
   };
 }
 
-const labelPred = (n: any): Labelled => ({ label: n[`${EB}label`], text: n[`${EB}predicate`] });
-const labelAssign = (n: any): Labelled => ({ label: n[`${EB}label`], text: n[`${EB}assignment`] });
+const labelPred = (n: XmlNode): Labelled => ({ label: attr(n, `${EB}label`), text: attr(n, `${EB}predicate`) });
+const labelAssign = (n: XmlNode): Labelled => ({ label: attr(n, `${EB}label`), text: attr(n, `${EB}assignment`) });
