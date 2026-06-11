@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Generated code output — kept local; regenerate with `npm run generate`.
+# The hand-written build-instructions doc (generated/README.md) stays tracked.
+/generated/*
+!/generated/README.md
