@@ -97,7 +97,7 @@ exact translated fragments to paste in, not the protocol's routing decisions.
 The generated module is an `ipv4`-slot `NetworkProtocolBase` subclass. For the verified
 compile-and-run recipe against a real INET 4.5 project (toolchain paths, the `NetworkLayer.ned`
 wrapper, `opp_makemake` flags, and the headless-run gotchas), see
-**[generated/README.md](generated/README.md)**.
+**[docs/OMNETPP_INTEGRATION.md](docs/OMNETPP_INTEGRATION.md)**.
 
 ---
 
@@ -110,7 +110,8 @@ src/io/         folder read + folder/zip write (File System Access + fallbacks)
 src/App.tsx     thin UI shell
 scripts/        headless generate CLI (+ analyze helper)
 tests/          vitest suite + fixtures (rtmcs, mintroute)
-generated/      committed sample output + OMNeT++/INET build instructions
+docs/           OMNeT++/INET integration guide
+generated/      local-only generator output (gitignored)
 ```
 
 ## Scripts
