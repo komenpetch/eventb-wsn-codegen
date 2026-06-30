@@ -25,3 +25,6 @@ dist-ssr
 
 # Generated code output — kept local; regenerate with `npm run generate`.
 /generated/
+
+# Compile-gate scratch output (Task 10 scripts/generate.ts; probe artifacts).
+/out/
