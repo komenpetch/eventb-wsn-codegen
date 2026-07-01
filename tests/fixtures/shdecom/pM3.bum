@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<org.eventb.core.machineFile org.eventb.core.configuration="org.eventb.core.fwd;org.eventb.codegen.ui.cgConfig" org.eventb.texttools.text_lastmodified="1433264114105" org.eventb.texttools.text_representation="machine pM3 refines uM2  sees cM2&#10;&#10;variables pktFwdr // fowarder attached in transmitted packet&#10;          pktData // (ctl) data attached in transmitted packet&#10;          createdPkts // created packets&#10;          ndBuff // nodes' recvBuff&#10;          sentDown // transmitted packet to channel&#10;          sentUp // transmitted packet up to channel&#10;          ctlNeighbours // (ctl) neighbour lists&#10;          destBuff // destination's buffers&#10;          recvBuff clrRecvBuffFlg&#10;&#9;&#9;  ctlSensedFlg senseBuff&#10;&#10;invariants&#10;@MSensingUnit_sensing_inv_1 ctlSensedFlg ∈ ND ∖ Dests → BOOL&#10;@MSensingUnit_sensing_inv_2 senseBuff ∈ ND ∖ Dests → ℙ(ℤ)&#10;&#10;&#10;events&#10;  event INITIALISATION extends INITIALISATION&#10;  then&#10;      @MSensingUnit_sensing_int_1 ctlSensedFlg ≔ (ND ∖Dests) × {FALSE}&#10;      @MSensingUnit_sensing_int_2 senseBuff ≔ (ND ∖Dests) × {∅}&#10;  end&#10;&#10;event sensing&#10;    any x sf data&#10;    where&#10;      @MSensingUnit_sensing_g1 x ∈ ND ∖Dests&#10;      @MSensingUnit_sensing_g2 sf ∈BOOL&#10;      @MSensingUnit_sensing_g3 data ∈ ℤ&#10;      @MSensingUnit_sensing_g4 x ∈ dom(ctlSensedFlg) ∧ ctlSensedFlg(x) = FALSE&#10;    then&#10;      @MSensingUnit_sensing_a1 ctlSensedFlg(x) ≔ sf&#10;      @MSensingUnit_sensing_a2 senseBuff(x) ≔  senseBuff(x) ∪ {data}&#10;  end&#10;&#10;  event creatingDataPacket extends creatingDataPacket&#10;  where&#10;       @MSensingUnit_removeSenseBuff_g1 senseBuff ≠ ∅ ∧ data ∈ senseBuff(x)&#10;  then&#10;        @MSensingUnit_removeSenseBuff_a1 senseBuff(x) ≔  senseBuff(x) ∖{data}&#10;  end&#10;&#10;  event creatingControlPacket extends creatingControlPacket&#10;  end&#10;&#10;  event start_tx extends start_tx&#10;  end&#10;&#10;  event send_down extends send_down&#10;  end&#10;&#10;  event send_up // (env) channel sends the neighbour information&#10;  extends send_up&#10;  end&#10;&#10;  event receive extends receive&#10;  end&#10;&#10;  event clear_recvdBuff extends clear_recvdBuff&#10;  end&#10;&#10;  event fwdr_receive_pkt extends fwdr_receive_pkt&#10;  end&#10;&#10;  event dest_recv_pkt extends dest_recv_pkt&#10;  end&#10;&#10;  event finish_tx_pkt extends finish_tx_pkt&#10;  end&#10;&#10;  event final_tx_pkt extends final_tx_pkt&#10;  end&#10;end&#10;" version="5">
+<org.eventb.core.refinesMachine name="'" org.eventb.core.target="uM2"/>
+<org.eventb.core.seesContext name="_sjSb0Ak_EeWZ6ayKi1-Bfw" org.eventb.core.target="cM2"/>
+<org.eventb.core.variable name="_niA6Wwk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="fowarder attached in transmitted packet" org.eventb.core.identifier="pktFwdr"/>
+<org.eventb.core.variable name="_niA6XAk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="(ctl) data attached in transmitted packet" org.eventb.core.identifier="pktData"/>
+<org.eventb.core.variable name="_niA6XQk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="created packets" org.eventb.core.identifier="createdPkts"/>
+<org.eventb.core.variable name="_niA6Xgk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="nodes' recvBuff" org.eventb.core.identifier="ndBuff"/>
+<org.eventb.core.variable name="_niA6Xwk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="transmitted packet to channel" org.eventb.core.identifier="sentDown"/>
+<org.eventb.core.variable name="_niA6YAk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="transmitted packet up to channel" org.eventb.core.identifier="sentUp"/>
+<org.eventb.core.variable name="_niA6YQk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="(ctl) neighbour lists" org.eventb.core.identifier="ctlNeighbours"/>
+<org.eventb.core.variable name="_niA6Ygk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="destination's buffers" org.eventb.core.identifier="destBuff"/>
+<org.eventb.core.variable name="_niA6Ywk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="recvBuff"/>
+<org.eventb.core.variable name="_niA6ZAk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="clrRecvBuffFlg"/>
+<org.eventb.core.event name="_sjSb0Ak_EeWZ6ayKi1-Bfx" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="INITIALISATION">
+<org.eventb.core.action name="_wa3KUAk_EeWZ6ayKi1-Bfw" org.eventb.core.assignment="ctlSensedFlg ≔ (ND ∖Dests) × {FALSE}" org.eventb.core.label="MSensingUnit_sensing_int_1"/>
+<org.eventb.core.action name="_wa3KUQk_EeWZ6ayKi1-Bfw" org.eventb.core.assignment="senseBuff ≔ (ND ∖Dests) × {∅}" org.eventb.core.label="MSensingUnit_sensing_int_2"/>
+</org.eventb.core.event>
+<org.eventb.core.variable name="_wa9Q8wk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="ctlSensedFlg"/>
+<org.eventb.core.variable name="_wa9Q9Ak_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="senseBuff"/>
+<org.eventb.core.invariant name="_wa9Q9Qk_EeWZ6ayKi1-Bfw" org.eventb.core.label="MSensingUnit_sensing_inv_1" org.eventb.core.predicate="ctlSensedFlg ∈ ND ∖ Dests → BOOL"/>
+<org.eventb.core.invariant name="_wa9Q9gk_EeWZ6ayKi1-Bfw" org.eventb.core.label="MSensingUnit_sensing_inv_2" org.eventb.core.predicate="senseBuff ∈ ND ∖ Dests → ℙ(ℤ)"/>
+<org.eventb.core.event name="_wa9Q9wk_EeWZ6ayKi1-Bfw" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="sensing">
+<org.eventb.core.parameter name="_wa9Q-Ak_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="x"/>
+<org.eventb.core.parameter name="_wa9Q-Qk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="sf"/>
+<org.eventb.core.parameter name="_wa9Q-gk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="data"/>
+<org.eventb.core.guard name="_wa9Q-wk_EeWZ6ayKi1-Bfw" org.eventb.core.label="MSensingUnit_sensing_g1" org.eventb.core.predicate="x ∈ ND ∖Dests"/>
+<org.eventb.core.guard name="_wa9Q_Ak_EeWZ6ayKi1-Bfw" org.eventb.core.label="MSensingUnit_sensing_g2" org.eventb.core.predicate="sf ∈BOOL"/>
+<org.eventb.core.guard name="_wa9Q_Qk_EeWZ6ayKi1-Bfw" org.eventb.core.label="MSensingUnit_sensing_g3" org.eventb.core.predicate="data ∈ ℤ"/>
+<org.eventb.core.guard name="_wa9Q_gk_EeWZ6ayKi1-Bfw" org.eventb.core.label="MSensingUnit_sensing_g4" org.eventb.core.predicate="x ∈ dom(ctlSensedFlg) ∧ ctlSensedFlg(x) = FALSE"/>
+<org.eventb.core.action name="_wa9Q_wk_EeWZ6ayKi1-Bfw" org.eventb.core.assignment="ctlSensedFlg(x) ≔ sf" org.eventb.core.label="MSensingUnit_sensing_a1"/>
+<org.eventb.core.action name="_wa9RAAk_EeWZ6ayKi1-Bfw" org.eventb.core.assignment="senseBuff(x) ≔  senseBuff(x) ∪ {data}" org.eventb.core.label="MSensingUnit_sensing_a2"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_sjSb0Ak_EeWZ6ayKi1-Bg+" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="creatingDataPacket">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="creatingDataPacket"/>
+<org.eventb.core.guard name="_wa9Q8Ak_EeWZ6ayKi1-Bfw" org.eventb.core.label="MSensingUnit_removeSenseBuff_g1" org.eventb.core.predicate="senseBuff ≠ ∅ ∧ data ∈ senseBuff(x)"/>
+<org.eventb.core.action name="_wa9Q8Qk_EeWZ6ayKi1-Bfw" org.eventb.core.assignment="senseBuff(x) ≔  senseBuff(x) ∖{data}" org.eventb.core.label="MSensingUnit_removeSenseBuff_a1"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_sjSb0Ak_EeWZ6ayKi1-Bfy" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="creatingControlPacket">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="creatingControlPacket"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_sjSb0Ak_EeWZ6ayKi1-Bfz" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="start_tx">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="start_tx"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_sjSb0Ak_EeWZ6ayKi1-Bf{" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="send_down">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="send_down"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_sjSb0Ak_EeWZ6ayKi1-Bf|" org.eventb.core.comment="(env) channel sends the neighbour information" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="send_up">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="send_up"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_sjSb0Ak_EeWZ6ayKi1-Bf}" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="receive">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="receive"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_sjSb0Ak_EeWZ6ayKi1-Bf~" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="clear_recvdBuff">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="clear_recvdBuff"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_sjSb0Ak_EeWZ6ayKi1-Bg'" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="fwdr_receive_pkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="fwdr_receive_pkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_sjSb0Ak_EeWZ6ayKi1-Bg(" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="dest_recv_pkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="dest_recv_pkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_sjSb0Ak_EeWZ6ayKi1-Bg)" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="finish_tx_pkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="finish_tx_pkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_sjSb0Ak_EeWZ6ayKi1-Bg*" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="final_tx_pkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="final_tx_pkt"/>
+</org.eventb.core.event>
+</org.eventb.core.machineFile>

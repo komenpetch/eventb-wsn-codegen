@@ -1,5 +1,5 @@
 import JSZip from "jszip";
-import type { VirtualFileTree } from "../engine/types";
+import type { GeneratedTree } from "../engine/types";
 
 // The File System Access API (showDirectoryPicker / createWritable) is not in
 // the standard TypeScript DOM lib, so the minimal surface used here is declared
@@ -88,7 +88,7 @@ export async function readZip(file: Blob): Promise<{ name: string; xml: string }
   return files;
 }
 
-export async function writeTree(tree: VirtualFileTree): Promise<"folder" | "zip"> {
+export async function writeTree(tree: GeneratedTree): Promise<"folder" | "zip"> {
   if (fsWindow.showDirectoryPicker) {
     const dir = await fsWindow.showDirectoryPicker({ mode: "readwrite" });
     for (const f of tree) {

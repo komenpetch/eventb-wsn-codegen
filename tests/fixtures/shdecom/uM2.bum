@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<org.eventb.core.machineFile org.eventb.core.configuration="org.eventb.core.fwd;org.eventb.codegen.ui.cgConfig" org.eventb.texttools.text_lastmodified="1433264099395" org.eventb.texttools.text_representation="machine uM2 refines pM1  sees cM2&#10;&#10;variables pktFwdr // fowarder attached in transmitted packet&#10;          pktData // (ctl) data attached in transmitted packet&#10;          createdPkts // created packets&#10;          ndBuff // nodes' recvBuff&#10;          sentDown // transmitted packet to channel&#10;          sentUp // transmitted packet up to channel&#10;          ctlNeighbours // (ctl) neighbour lists&#10;          destBuff // destination's buffers&#10;          recvBuff clrRecvBuffFlg&#10;&#10;events&#10;  event INITIALISATION extends INITIALISATION&#10;  end&#10;&#10;  event creatingDataPacket refines creatingPkt&#10;    any x des pkt data&#10;    where&#10;      @MPacket_creating_pkt_g1 x ∈ ND ∖Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ&#10;      @MPacket_creating_pkt_g2 x = initialSrcAddr(pkt) ∧  des = ran({pkt} ◁ finalDestAddr)&#10;      @MPacket_creating_pkt_g3 pkt ∉ dom(pktFwdr)&#10;      @MPacket_creating_pkt_g4 pkt  ∉ dom(pktData)&#10;      @MNDbuffMgt_record_ndBuff_g1 x  ↦ pkt ∉ ndBuff&#10;      @User_defined_guard_g1 type(pkt) = DATA&#10;    then&#10;      @MPacket_creating_pkt_a1 createdPkts≔ createdPkts ∪ {pkt}&#10;      @MPacket_creating_pkt_a2 pktFwdr ≔ pktFwdr ∪ {pkt ↦ x}&#10;      @MPacket_creating_pkt_a3 pktData ≔ pktData ∪ {pkt ↦ data}&#10;      @MNDbuffMgt_record_ndBuff_a1 ndBuff ≔ ndBuff  ∪ {x ↦ pkt}&#10;  end&#10;&#10;  event creatingControlPacket refines creatingPkt&#10;    any x des pkt data&#10;    where&#10;      @MPacket_creating_pkt_g1 x ∈ ND ∖Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ&#10;      @MPacket_creating_pkt_g2 x = initialSrcAddr(pkt) ∧  des = ran({pkt} ◁ finalDestAddr)&#10;      @MPacket_creating_pkt_g3 pkt ∉ dom(pktFwdr)&#10;      @MPacket_creating_pkt_g4 pkt  ∉ dom(pktData)&#10;      @MNDbuffMgt_record_ndBuff_g1 x  ↦ pkt ∉ ndBuff&#10;       @User_defined_guard_g1 data = CTL_VAL&#10;        @User_defined_guard_g2 type(pkt) ∈ CONTROL&#10;    then&#10;      @MPacket_creating_pkt_a1 createdPkts≔ createdPkts ∪ {pkt}&#10;      @MPacket_creating_pkt_a2 pktFwdr ≔ pktFwdr ∪ {pkt ↦ x}&#10;      @MPacket_creating_pkt_a3 pktData ≔ pktData ∪ {pkt ↦ data}&#10;      @MNDbuffMgt_record_ndBuff_a1 ndBuff ≔ ndBuff  ∪ {x ↦ pkt}&#10;  end&#10;&#10;  event start_tx extends start_tx&#10;  end&#10;&#10;  event send_down extends send_down&#10;  end&#10;&#10;  event send_up // (env) channel sends the neighbour information&#10;  extends send_up&#10;  end&#10;&#10;  event receive extends receive&#10;  end&#10;&#10;  event clear_recvdBuff extends clear_recvdBuff&#10;  end&#10;&#10;  event fwdr_receive_pkt extends fwdr_receive_pkt&#10;  end&#10;&#10;  event dest_recv_pkt extends dest_recv_pkt&#10;  end&#10;&#10;  event finish_tx_pkt extends finish_tx_pkt&#10;  end&#10;&#10;  event final_tx_pkt extends final_tx_pkt&#10;  end&#10;end&#10;" version="5">
+<org.eventb.core.refinesMachine name="'" org.eventb.core.target="pM1"/>
+<org.eventb.core.seesContext name="_sjSb0Ak_EeWZ6ayKi1-Bfw" org.eventb.core.target="cM2"/>
+<org.eventb.core.variable name="_niA6Wwk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="fowarder attached in transmitted packet" org.eventb.core.identifier="pktFwdr"/>
+<org.eventb.core.variable name="_niA6XAk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="(ctl) data attached in transmitted packet" org.eventb.core.identifier="pktData"/>
+<org.eventb.core.variable name="_niA6XQk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="created packets" org.eventb.core.identifier="createdPkts"/>
+<org.eventb.core.variable name="_niA6Xgk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="nodes' recvBuff" org.eventb.core.identifier="ndBuff"/>
+<org.eventb.core.variable name="_niA6Xwk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="transmitted packet to channel" org.eventb.core.identifier="sentDown"/>
+<org.eventb.core.variable name="_niA6YAk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="transmitted packet up to channel" org.eventb.core.identifier="sentUp"/>
+<org.eventb.core.variable name="_niA6YQk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="(ctl) neighbour lists" org.eventb.core.identifier="ctlNeighbours"/>
+<org.eventb.core.variable name="_niA6Ygk_EeWZ6ayKi1-Bfw" org.eventb.core.comment="destination's buffers" org.eventb.core.identifier="destBuff"/>
+<org.eventb.core.variable name="_niA6Ywk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="recvBuff"/>
+<org.eventb.core.variable name="_niA6ZAk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="clrRecvBuffFlg"/>
+<org.eventb.core.event name="_niA6ZAk_EeWZ6ayKi1-Bfx" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="INITIALISATION"/>
+<org.eventb.core.event name="_sjYigAk_EeWZ6ayKi1-Bfw" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="creatingControlPacket">
+<org.eventb.core.refinesEvent name="_sjYigQk_EeWZ6ayKi1-Bfw" org.eventb.core.target="creatingPkt"/>
+<org.eventb.core.parameter name="_sjYiggk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="x"/>
+<org.eventb.core.parameter name="_sjYigwk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="des"/>
+<org.eventb.core.parameter name="_sjYihAk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="pkt"/>
+<org.eventb.core.parameter name="_sjepEAk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="data"/>
+<org.eventb.core.guard name="_sjepEQk_EeWZ6ayKi1-Bfw" org.eventb.core.label="MPacket_creating_pkt_g1" org.eventb.core.predicate="x ∈ ND ∖Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ"/>
+<org.eventb.core.guard name="_sjepEgk_EeWZ6ayKi1-Bfw" org.eventb.core.label="MPacket_creating_pkt_g2" org.eventb.core.predicate="x = initialSrcAddr(pkt) ∧  des = ran({pkt} ◁ finalDestAddr)"/>
+<org.eventb.core.guard name="_sjepEwk_EeWZ6ayKi1-Bfw" org.eventb.core.label="MPacket_creating_pkt_g3" org.eventb.core.predicate="pkt ∉ dom(pktFwdr)"/>
+<org.eventb.core.guard name="_sjepFAk_EeWZ6ayKi1-Bfw" org.eventb.core.label="MPacket_creating_pkt_g4" org.eventb.core.predicate="pkt  ∉ dom(pktData)"/>
+<org.eventb.core.guard name="_sjepFQk_EeWZ6ayKi1-Bfw" org.eventb.core.label="MNDbuffMgt_record_ndBuff_g1" org.eventb.core.predicate="x  ↦ pkt ∉ ndBuff"/>
+<org.eventb.core.guard name="_sjepFgk_EeWZ6ayKi1-Bfw" org.eventb.core.label="User_defined_guard_g1" org.eventb.core.predicate="data = CTL_VAL"/>
+<org.eventb.core.guard name="_sjepFwk_EeWZ6ayKi1-Bfw" org.eventb.core.label="User_defined_guard_g2" org.eventb.core.predicate="type(pkt) ∈ CONTROL"/>
+<org.eventb.core.action name="_sjepGAk_EeWZ6ayKi1-Bfw" org.eventb.core.assignment="createdPkts≔ createdPkts ∪ {pkt}" org.eventb.core.label="MPacket_creating_pkt_a1"/>
+<org.eventb.core.action name="_sjepGQk_EeWZ6ayKi1-Bfw" org.eventb.core.assignment="pktFwdr ≔ pktFwdr ∪ {pkt ↦ x}" org.eventb.core.label="MPacket_creating_pkt_a2"/>
+<org.eventb.core.action name="_sjepGgk_EeWZ6ayKi1-Bfw" org.eventb.core.assignment="pktData ≔ pktData ∪ {pkt ↦ data}" org.eventb.core.label="MPacket_creating_pkt_a3"/>
+<org.eventb.core.action name="_sjepGwk_EeWZ6ayKi1-Bfw" org.eventb.core.assignment="ndBuff ≔ ndBuff  ∪ {x ↦ pkt}" org.eventb.core.label="MNDbuffMgt_record_ndBuff_a1"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_niA6ZAk_EeWZ6ayKi1-Bfz" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="start_tx">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="start_tx"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_niA6ZAk_EeWZ6ayKi1-Bf{" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="send_down">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="send_down"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_niA6ZAk_EeWZ6ayKi1-Bf|" org.eventb.core.comment="(env) channel sends the neighbour information" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="send_up">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="send_up"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_niA6ZAk_EeWZ6ayKi1-Bf}" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="receive">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="receive"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_niA6ZAk_EeWZ6ayKi1-Bf~" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="clear_recvdBuff">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="clear_recvdBuff"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_niA6ZAk_EeWZ6ayKi1-Bg'" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="fwdr_receive_pkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="fwdr_receive_pkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_niA6ZAk_EeWZ6ayKi1-Bg(" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="dest_recv_pkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="dest_recv_pkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_niA6ZAk_EeWZ6ayKi1-Bg)" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="finish_tx_pkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="finish_tx_pkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_niA6ZAk_EeWZ6ayKi1-Bg*" org.eventb.core.convergence="0" org.eventb.core.extended="true" org.eventb.core.label="final_tx_pkt">
+<org.eventb.core.refinesEvent name="'" org.eventb.core.target="final_tx_pkt"/>
+</org.eventb.core.event>
+<org.eventb.core.event name="_sjYicAk_EeWZ6ayKi1-Bfw" org.eventb.core.convergence="0" org.eventb.core.extended="false" org.eventb.core.label="creatingDataPacket">
+<org.eventb.core.refinesEvent name="_sjYicQk_EeWZ6ayKi1-Bfw" org.eventb.core.target="creatingPkt"/>
+<org.eventb.core.parameter name="_sjYicgk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="x"/>
+<org.eventb.core.parameter name="_sjYicwk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="des"/>
+<org.eventb.core.parameter name="_sjYidAk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="pkt"/>
+<org.eventb.core.parameter name="_sjYidQk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="data"/>
+<org.eventb.core.guard name="_sjYidgk_EeWZ6ayKi1-Bfw" org.eventb.core.label="MPacket_creating_pkt_g1" org.eventb.core.predicate="x ∈ ND ∖Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ"/>
+<org.eventb.core.guard name="_sjYidwk_EeWZ6ayKi1-Bfw" org.eventb.core.label="MPacket_creating_pkt_g2" org.eventb.core.predicate="x = initialSrcAddr(pkt) ∧  des = ran({pkt} ◁ finalDestAddr)"/>
+<org.eventb.core.guard name="_sjYieAk_EeWZ6ayKi1-Bfw" org.eventb.core.label="MPacket_creating_pkt_g3" org.eventb.core.predicate="pkt ∉ dom(pktFwdr)"/>
+<org.eventb.core.guard name="_sjYieQk_EeWZ6ayKi1-Bfw" org.eventb.core.label="MPacket_creating_pkt_g4" org.eventb.core.predicate="pkt  ∉ dom(pktData)"/>
+<org.eventb.core.guard name="_sjYiegk_EeWZ6ayKi1-Bfw" org.eventb.core.label="MNDbuffMgt_record_ndBuff_g1" org.eventb.core.predicate="x  ↦ pkt ∉ ndBuff"/>
+<org.eventb.core.guard name="_sjYiewk_EeWZ6ayKi1-Bfw" org.eventb.core.label="User_defined_guard_g1" org.eventb.core.predicate="type(pkt) = DATA"/>
+<org.eventb.core.action name="_sjYifAk_EeWZ6ayKi1-Bfw" org.eventb.core.assignment="createdPkts≔ createdPkts ∪ {pkt}" org.eventb.core.label="MPacket_creating_pkt_a1"/>
+<org.eventb.core.action name="_sjYifQk_EeWZ6ayKi1-Bfw" org.eventb.core.assignment="pktFwdr ≔ pktFwdr ∪ {pkt ↦ x}" org.eventb.core.label="MPacket_creating_pkt_a2"/>
+<org.eventb.core.action name="_sjYifgk_EeWZ6ayKi1-Bfw" org.eventb.core.assignment="pktData ≔ pktData ∪ {pkt ↦ data}" org.eventb.core.label="MPacket_creating_pkt_a3"/>
+<org.eventb.core.action name="_sjYifwk_EeWZ6ayKi1-Bfw" org.eventb.core.assignment="ndBuff ≔ ndBuff  ∪ {x ↦ pkt}" org.eventb.core.label="MNDbuffMgt_record_ndBuff_a1"/>
+</org.eventb.core.event>
+</org.eventb.core.machineFile>

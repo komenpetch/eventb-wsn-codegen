@@ -1,116 +1,138 @@
-import type { EncodedModel, Fragment, VirtualFileTree, EncodingForm } from "./types";
-import ebHelpers from "../assets/eb_helpers.h?raw";
+import type { EncodedMachine, EncodingForm, GeneratedTree } from "./types";
+import { translateEvent } from "./ruleEngine";
 
-const CPP: Record<EncodingForm, string> = {
-  "function": "std::map<int, int>",
-  "pair-keyed": "std::map<std::pair<int,int>, int>",
-  "map-of-sets": "std::map<int, std::set<int>>",
-  "pair-set": "std::set<std::pair<int,int>>",
-};
+// Map an Event-B carrier token to its C++ alias (defined in eb_context.h).
+const ALIAS: Record<string, string> = { ND: "Node", PKT: "PktId", Dests: "Node", "ℤ": "Data", BOOL: "bool" };
+const alias = (token: string): string => ALIAS[token] ?? "int";
 
-export function emit(model: EncodedModel, frags: Fragment[]): VirtualFileTree {
-  const p = model.protocol;
-  const lower = p.toLowerCase();
+// Pull domain/range carrier tokens out of an invariant, unwrapping ℙ(…).
+function domRan(inv: string | undefined): { dom?: string; ran?: string } {
+  if (!inv) return {};
+  const rhs = inv.replace(/^[^∈⊆]*[∈⊆]\s*/, "").trim();
+  const m = /(.+?)\s*(↔|→|⇸)\s*(.+)/.exec(rhs);
+  if (m) {
+    const dTok = (m[1].match(/\w+|ℤ/g) ?? []).pop()!;          // last word of domain
+    const rRaw = m[3].replace(/ℙ\(|\)/g, "").trim();           // unwrap ℙ(…)
+    const rTok = (rRaw.match(/\w+|ℤ/g) ?? [])[0]!;
+    return { dom: alias(dTok), ran: alias(rTok) };
+  }
+  const sub = /ℙ\((\w+|ℤ)\)|⊆\s*(\w+)/.exec(inv);              // plain set / ℙ(T)
+  if (sub) return { ran: alias(sub[1] ?? sub[2]) };
+  return {};
+}
+
+function cppType(form: EncodingForm, inv: string | undefined): string {
+  const { dom = "int", ran = "int" } = domRan(inv);
+  switch (form) {
+    case "set": return `std::set<${ran}>`;
+    case "function": return `std::map<${dom}, ${ran}>`;
+    case "pair-set": return `std::set<std::pair<${dom}, ${ran}>>`;
+    case "map-of-sets": return `std::map<${dom}, std::set<${ran}>>`;
+    case "bool": return "bool";
+    default: return "int";
+  }
+}
+
+// Parameter list, typed from the event's typing guards (then those guards drop).
+function params(ev: { parameters: string[]; guards: string[] }): string {
+  const typeOf = (p: string): string => {
+    for (const g of ev.guards) {
+      // Set-typed param: `p ∈ ℙ(ND)` or the set-builder `p ∈ {n∣ … ℙ(ND) …}`.
+      if (new RegExp(`\\b${p}\\s*∈\\s*(?:ℙ\\(|\\{[^}]*ℙ\\()`).test(g)) return "const std::set<Node>&";
+      const m = new RegExp(`\\b${p}\\s*∈\\s*(\\w+|ℤ)`).exec(g);
+      if (m) return alias(m[1]);
+    }
+    return "int";
+  };
+  return ev.parameters.map((p) => `${typeOf(p)} ${p}`).join(", ");
+}
+
+export function emit(model: EncodedMachine, name: string): GeneratedTree {
   const fields = [...model.encodings.entries()]
-    .map(([id, form]) => `  ${CPP[form]} ${id};`).join("\n");
+    .map(([id, form]) => `    ${cppType(form, model.variableTypes.get(id))} ${id};`).join("\n");
 
-  // Surface the pattern-matcher and rule-engine output in the generated .cc so
-  // it is not silently discarded: a one-line pattern summary plus the distinct
-  // translated guard/action fragments as reference for the M4-M6 hand-completion.
-  const pat = model.patterns;
-  const patternLine =
-    `// Detected patterns - CommPattern(packets: ${pat.comm.packetVars.join(", ") || "none"}` +
-    `${pat.comm.floodTableVar ? `, flood: ${pat.comm.floodTableVar}` : ""}); ` +
-    `RouteTable: ${pat.route ? `${pat.route.kind} (${pat.route.tableVars.join(", ")})` : "none"}; ` +
-    `ENVPattern(link: ${pat.env.linkVar ?? "none"}, neighbours: ${pat.env.neighbourVars.join(", ") || "none"}).`;
-  const distinctFrags = [...new Map(frags.map((f) => [f.cpp, f])).values()];
-  const fragmentBlock = distinctFrags.length
-    ? "\n// --- Translated guard/action fragments (rule catalog R*/A*) ---------------\n" +
-      "// Reference C++ for the M4-M6 imperative bodies (project Phase 4 hand-completion).\n" +
-      distinctFrags.map((f) => `//   [${f.rule}] ${f.sourceExpr}  =>  ${f.cpp}`).join("\n") + "\n"
+  const decls: string[] = [];
+  const defs: string[] = [];
+  for (const raw of model.events) {
+    if (raw.label === "INITIALISATION") continue;
+    const t = translateEvent(raw, model);
+    const sig = `bool ${t.label}(${params(raw)})`;
+    decls.push(`    ${sig};`);
+    if (t.actions.length === 0) {
+      const pred = t.guards.length ? t.guards.join(" && ") : "true";
+      defs.push(`bool ${name}::${t.label}(${params(raw)}) {\n    return ${pred};\n}`);
+    } else {
+      const body = [
+        ...t.guards.map((g) => `    if (!(${g})) return false;`),
+        ...t.actions.map((a) => `    ${a}`),
+        "    return true;",
+      ].join("\n");
+      defs.push(`bool ${name}::${t.label}(${params(raw)}) {\n${body}\n}`);
+    }
+  }
+
+  const init = model.events.find((e) => e.label === "INITIALISATION");
+  const ctorBody = init
+    ? translateEvent(init, model).actions.map((a) => `    ${a}`).join("\n")
     : "";
 
-  // NetworkProtocolBase leaves getProtocol() pure virtual, and OperationalMixin
-  // (via LayeredProtocolBase) leaves handleStartOperation/Stop/Crash pure
-  // virtual. Every one must be overridden or Define_Module instantiates an
-  // abstract class and the INET build fails. INetworkProtocol is the C++ side
-  // of the .ned `like INetworkProtocol` and is a pure marker interface.
   const header = `#pragma once
 #include <map>
 #include <set>
 #include <utility>
 #include "eb_helpers.h"
-#include "inet/networklayer/base/NetworkProtocolBase.h"
-#include "inet/networklayer/contract/INetworkProtocol.h"
+#include "eb_context.h"
+#include "inet/routing/base/RoutingProtocolBase.h"
 
 using namespace inet;
 
-class ${p} : public NetworkProtocolBase, public INetworkProtocol {
- protected:
+class ${name} : public RoutingProtocolBase {
+  protected:
 ${fields}
 
-  // Protocol identity; defined in the .cc against a file-local Protocol.
-  const Protocol& getProtocol() const override;
+    // OperationalBase pure virtuals — empty stubs keep the module concrete
+    // (real message handling is the network-layer next step).
+    void handleMessageWhenUp(cMessage *msg) override { delete msg; }
+    void handleStartOperation(LifecycleOperation *op) override {}
+    void handleStopOperation(LifecycleOperation *op) override {}
+    void handleCrashOperation(LifecycleOperation *op) override {}
 
-  void handleUpperPacket(Packet *packet) override;
-  void handleLowerPacket(Packet *packet) override;
-  void initialize(int stage) override;
+    // Application-layer events (translated from the Event-B pattern machine).
+${decls.join("\n")}
 
-  // Lifecycle hooks are pure virtual in OperationalMixin; empty bodies keep the
-  // module concrete. Start/stop/crash logic is a project Phase 4 fill-in.
-  void handleStartOperation(LifecycleOperation *operation) override {}
-  void handleStopOperation(LifecycleOperation *operation) override {}
-  void handleCrashOperation(LifecycleOperation *operation) override {}
+  public:
+    ${name}();
 };
 `;
 
-  // The Protocol ctor only rejects names containing a space (inet Protocol.cc),
-  // so registering under the lowercased module name is safe to construct.
-  const source = `#include "${p}.h"
-#include "inet/common/Protocol.h"
+  const source = `#include "${name}.h"
 
-${patternLine}
+Define_Module(${name});
 
-Define_Module(${p});
+${name}::${name}() {
+${ctorBody}
+}
 
-static const Protocol ${lower}Protocol("${lower}", "${p}", Protocol::NetworkLayer);
+${defs.join("\n\n")}
+`;
 
-const Protocol& ${p}::getProtocol() const { return ${lower}Protocol; }
-
-void ${p}::initialize(int stage) { NetworkProtocolBase::initialize(stage); }
-void ${p}::handleUpperPacket(Packet *packet) { /* M4-M6 event bodies: project Phase 4 */ }
-void ${p}::handleLowerPacket(Packet *packet) { /* M4-M6 event bodies: project Phase 4 */ }
-${fragmentBlock}`;
-
-  // Extending NetworkProtocolBase inherits its transportIn/transportOut and
-  // queueIn/queueOut gates plus the required interfaceTableModule parameter;
-  // @class binds the NED type to the Define_Module-registered C++ class.
-  const ned = `import inet.networklayer.base.NetworkProtocolBase;
-import inet.networklayer.contract.INetworkProtocol;
+  const ned = `import inet.routing.base.RoutingProtocolBase;
 
 //
-// Generated network-layer protocol. Protocol-specific parameters are a project
-// Phase 4 fill-in.
+// Generated application-layer module from the WSN pattern machine ${model.name}.
+// Network-layer wiring (handleUpper/LowerPacket bodies) is the next step.
 //
-simple ${p} extends NetworkProtocolBase like INetworkProtocol
+simple ${name} extends RoutingProtocolBase
 {
     parameters:
-        @class(${p});
-        @display("i=block/fork");
+        @class(${name});
+        @display("i=block/app");
 }
 `;
 
-  const ini = `[General]
-network = WSN
-**.numHosts = 10
-**.host[*].networkLayer.typename = "${p}"
-`;
-
   return [
-    { path: `${p}.h`, content: header },
-    { path: `${p}.cc`, content: source },
-    { path: `${p}.ned`, content: ned },
-    { path: `omnetpp.ini`, content: ini },
-    { path: `eb_helpers.h`, content: ebHelpers as string },
+    { path: `${name}.h`, content: header },
+    { path: `${name}.cc`, content: source },
+    { path: `${name}.ned`, content: ned },
   ];
 }

@@ -25,53 +25,30 @@ export interface RawContext {
 }
 export interface Labelled { label: string; text: string; }
 
-// ── Stage 2: Model output ───────────────────────────────────────────────
-export type Protocol = "RTMCS" | "MintRoute" | "DSR";
-export interface ResolvedModel {
-  protocol: Protocol;
-  machines: ResolvedMachine[];               // ordered M0..Mn
-  sets: string[];
-  constants: string[];
-  variableTypes: Map<string, string>;        // identifier → invariant predicate (raw Unicode)
+// ── Stage 3: Flattener output ───────────────────────────────────────────
+export interface FlatEvent {
+  label: string;
+  parameters: string[];
+  guards: string[];     // predicate strings, refines/extends merged in
+  actions: string[];    // assignment strings, refines/extends merged in
 }
-export interface ResolvedMachine {
-  name: string;
-  variables: string[];
-  events: RawEvent[];                        // merged across refines chain
+export interface FlatMachine {
+  name: string;                       // target machine label, e.g. "pM1"
+  variables: string[];                // union across the refines chain
+  variableTypes: Map<string, string>; // identifier → invariant predicate (raw Unicode)
+  events: FlatEvent[];                // every event fully flattened
 }
-
-// ── Stage 3: PatternMatcher output ──────────────────────────────────────
-export interface DetectedPatterns {
-  comm: CommBinding;                         // always present
-  route?: RouteTableBinding;
-  env: EnvBinding;
-}
-export interface CommBinding { packetVars: string[]; floodTableVar?: string; }
-export interface RouteTableBinding {
-  kind: "pair" | "single" | "source-cache";  // RTMCS/DSR | MintRoute | DSR-cache
-  tableVars: string[];                       // fwdRouteTbl, bwdRouteTbl, neighbourTbl, dsrPath…
-}
-export interface EnvBinding { linkVar?: string; neighbourVars: string[]; }
 
 // ── Stage 4: EncodingResolver output ────────────────────────────────────
-export type EncodingForm = "function" | "pair-keyed" | "map-of-sets" | "pair-set";
-export interface EncodedModel extends ResolvedModel {
-  encodings: Map<string, EncodingForm>;      // identifier → chosen C++ container form
-  patterns: DetectedPatterns;                // detected CommPattern/RouteTable/ENVPattern bindings
+// ENC1 scalar int alias | ENC2 plain set | ENC3 function map | ENC4 pair-set
+// | ENC5 map-of-sets | ENC6 bool. (Enum tags live in the context fixture.)
+export type EncodingForm =
+  | "int" | "set" | "function" | "pair-set" | "map-of-sets" | "bool";
+export interface EncodedMachine extends FlatMachine {
+  encodings: Map<string, EncodingForm>;  // machine variables only
 }
 
-// ── Stage 5: RuleEngine output ──────────────────────────────────────────
-export type RuleId = string;                 // "R1".."R20" | "A1".."A5"
-export interface Fragment {
-  sourceExpr: string;
-  rule: RuleId;
-  tier: 1 | 2 | 3 | "aux";
-  form?: "A" | "B" | "C";
-  encodingForm?: EncodingForm;
-  cpp: string;
-  provenance: "raw-XML" | "PDF-only";
-}
-
-// ── Stage 6: CodeEmitter output ─────────────────────────────────────────
-export interface VirtualFile { path: string; content: string; }
-export type VirtualFileTree = VirtualFile[];
+// ── Stage 5/6: RuleEngine + Emitter output ──────────────────────────────
+export interface Fragment { sourceExpr: string; rule: string; cpp: string; }
+export interface GeneratedFile { path: string; content: string; }
+export type GeneratedTree = GeneratedFile[];

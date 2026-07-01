@@ -1,169 +1,132 @@
-import type { EncodingForm, RuleId } from "./types";
+import type { EncodingForm } from "./types";
 
-// Translation rule catalog (R1–R20 + A1–A5), transcribed from the frozen
-// citation-ready reference `design/translation_rules_examples.md` v3.1
-// Tables 3-1 (abstract) / 3-2 (worked examples). Emission helper names match
-// `src/assets/eb_helpers.h` (the canonical CommPattern names + eb_* helpers).
-//
-// Each rule recognizes one Event-B surface form (Unicode predicate/assignment
-// string from a guard or action) and emits the corresponding C++ snippet.
-// RULES is ordered MOST-SPECIFIC-FIRST (Tier 3 nested → Tier 2 → Tier 1 → aux)
-// so nested forms (R19, R17) win over broader ones; the rule engine takes the
-// first matching rule per expression.
-
-export interface RuleMatch { captures: Record<string, string>; }
+export interface RuleMatch { captures: Record<string, string> }
 export interface Rule {
-  id: RuleId;
-  tier: 1 | 2 | 3 | "aux";
-  form?: "A" | "B" | "C";
-  provenance: "raw-XML" | "PDF-only";
+  id: string;
   match: (expr: string) => RuleMatch | null;
   emit: (m: RuleMatch, enc: (id: string) => EncodingForm | undefined) => string;
 }
 
 const re = (p: RegExp) => (expr: string): RuleMatch | null => {
-  const g = p.exec(expr);
+  const g = p.exec(expr.trim());
   return g ? { captures: g.groups ?? {} } : null;
 };
+const c = (m: RuleMatch) => m.captures;
 
+// Ordered MOST-SPECIFIC-FIRST. The rule engine takes the first match per clause.
+// Brace interiors allow optional whitespace (\s*) because the raw Event-B
+// assignments carry irregular spacing, e.g. `sentUp ≔ sentUp ∪ {x↦ pkt  }`.
 export const RULES: Rule[] = [
-  // ── Tier 3 — RouteTable SourceRouteCache (DSR-only, PDF-only) ───────────
-  { id: "R19", tier: 3, form: "C", provenance: "PDF-only",
-    match: re(/(?<pNd>\w+)\s*=\s*ran\(\{(?<i>\w+)\}\s*◁\s*ran\(\{(?<p>\w+)\}\s*◁\s*(?<path>\w+)\)\)/),
-    emit: (m) => `int ${m.captures.pNd} = routeNodeAt(${m.captures.path}, ${m.captures.p}, ${m.captures.i});` },
-  { id: "R20", tier: 3, form: "C", provenance: "PDF-only",
-    match: re(/card\(ran\(\{(?<p>\w+)\}\s*◁\s*(?<path>\w+)\)\)/),
-    emit: (m) => `routeLength(${m.captures.path}, ${m.captures.p})` },
+  // ── CMP2 total-function init: f ≔ (A ∖ B) × {const}  (incl. const = ∅) ──
+  { id: "CMP2", match: re(/^(?<f>\w+)\s*≔\s*\(\s*(?<A>\w+)\s*∖\s*(?<B>\w+)\s*\)\s*×\s*\{\s*(?<v>∅|\w+)\s*\}$/),
+    emit: (m) => {
+      const { f, A, B, v } = c(m);
+      const val = v === "∅" ? "{}" : v;
+      return `for (int _n : ${A}) if (${B}.count(_n) == 0) ${f}[_n] = ${val};`;
+    } },
 
-  // ── Tier 2 — RouteTable PairRouteTable (RTMCS + DSR) ────────────────────
-  { id: "R17", tier: 2, form: "A", provenance: "raw-XML",
-    match: re(/(?<s>\w+)\s*∈\s*ran\(\{(?<x>\w+)\}\s*◁\s*dom\((?<R>\w+)\)\)/),
-    emit: (m) => `domRestrictedRange(${m.captures.R}, ${m.captures.x}).count(${m.captures.s}) > 0` },
-  { id: "R18", tier: 2, form: "B", provenance: "raw-XML",
-    match: re(/(?<nxt>\w+)\s*=\s*(?<R>\w+)\((?<x>\w+)\s*↦\s*(?<s>\w+)\)/),
-    emit: (m) => `int ${m.captures.nxt} = tupleApply(${m.captures.R}, ${m.captures.x}, ${m.captures.s});` },
+  // ── reset to empty: X ≔ ∅  (FN5/SET5/PS7/MS8) ──
+  { id: "CLEAR", match: re(/^(?<X>\w+)\s*≔\s*∅$/),
+    emit: (m) => `${c(m).X}.clear();` },
 
-  // ── Tier 1 — cross-protocol common (R1–R16), most-specific first ────────
-  // R13 nested map insert: R := R ∪ {k ↦ {a ↦ b}}
-  { id: "R13", tier: 1, provenance: "raw-XML",
-    match: re(/(?<R>\w+)\s*≔\s*\k<R>\s*∪\s*\{(?<k>\w+)\s*↦\s*\{(?<a>\w+)\s*↦\s*(?<b>\w+)\}\}/),
-    emit: (m) => `${m.captures.R}[${m.captures.k}][${m.captures.a}] = ${m.captures.b};` },
-  // R16 set-valued function update: f(k) := f(k) ∪ {x}
-  { id: "R16", tier: 1, provenance: "raw-XML",
-    match: re(/(?<f>\w+)\((?<k>\w+)\)\s*≔\s*\k<f>\(\k<k>\)\s*∪\s*\{(?<x>\w+)\}/),
-    emit: (m) => `${m.captures.f}[${m.captures.k}].insert(${m.captures.x});` },
-  // R15 set-valued function membership: x ∉ f(k)
-  { id: "R15", tier: 1, provenance: "raw-XML",
-    match: re(/(?<x>\w+)\s*∉\s*(?<f>\w+)\((?<k>\w+)\)/),
-    emit: (m) => `(${m.captures.f}.count(${m.captures.k}) == 0 || ${m.captures.f}.at(${m.captures.k}).count(${m.captures.x}) == 0)` },
-  // R11 non-empty restriction guard: {k} ◁ R ≠ ∅  /  {k} ◁ R = ∅
-  { id: "R11", tier: 1, provenance: "raw-XML",
-    match: re(/\{(?<k>\w+)\}\s*◁\s*(?<R>\w+)\s*(?<op>≠|=)\s*∅/),
-    emit: (m) => m.captures.op === "≠"
-      ? `(${m.captures.R}.count(${m.captures.k}) > 0 && !${m.captures.R}.at(${m.captures.k}).empty())`
-      : `(${m.captures.R}.count(${m.captures.k}) == 0 || ${m.captures.R}.at(${m.captures.k}).empty())` },
-  // R9 relational override: R ⊴ {k ↦ v}
-  { id: "R9", tier: 1, provenance: "raw-XML",
-    match: re(/(?<R>\w+)\s*⊴\s*\{(?<k>\w+)\s*↦\s*(?<v>\w+)\}/),
-    emit: (m) => `${m.captures.R}[${m.captures.k}] = ${m.captures.v};` },
-  // R8 range anti-restriction: R := R ▷ {x}
-  { id: "R8", tier: 1, provenance: "raw-XML",
-    match: re(/(?<R>\w+)\s*≔\s*\k<R>\s*▷\s*\{(?<x>\w+)\}/),
-    emit: (m) => `eb_range_anti_restrict_pairset(${m.captures.R}, std::set<int>{${m.captures.x}});` },
-  // R7 relational image (assignment form): nbs = R[{f}]
-  { id: "R7", tier: 1, provenance: "raw-XML",
-    match: re(/(?<nbs>\w+)\s*=\s*(?<R>\w+)\[\{(?<f>\w+)\}\]/),
-    emit: (m) => `const std::set<int>& ${m.captures.nbs} = ${m.captures.R}.at(${m.captures.f});` },
-  // R6 range of domain restriction (map-of-sets read): nbrs = ran({k} ◁ R)
-  { id: "R6", tier: 1, provenance: "raw-XML",
-    match: re(/(?<nbrs>\w+)\s*=\s*ran\(\{(?<k>\w+)\}\s*◁\s*(?<R>\w+)\)/),
-    emit: (m) => `const std::set<int>& ${m.captures.nbrs} = ${m.captures.R}.at(${m.captures.k});` },
-  // R5 domain restriction (assignment): T := D ◁ R
-  { id: "R5", tier: 1, provenance: "raw-XML",
-    match: re(/(?<T>\w+)\s*≔\s*(?<D>\w+)\s*◁\s*(?<R>\w+)/),
-    emit: (m) => `${m.captures.T} = eb_dom_restrict(${m.captures.D}, ${m.captures.R});` },
-  // R2 domain membership: x ↦ s ∈ dom(R)
-  { id: "R2", tier: 1, provenance: "raw-XML",
-    match: re(/(?<x>\w+)\s*↦\s*(?<s>\w+)\s*∈\s*dom\((?<R>\w+)\)/),
-    emit: (m) => `${m.captures.R}.find({${m.captures.x}, ${m.captures.s}}) != ${m.captures.R}.end()` },
-  // R12 domain over union: x ∈ dom(R ∪ S)  /  x ∉ dom(R ∪ S)
-  { id: "R12", tier: 1, provenance: "raw-XML",
-    match: re(/(?<x>\w+)\s*(?<op>∉|∈)\s*dom\((?<R>\w+)\s*∪\s*(?<S>\w+)\)/),
-    emit: (m) => `${m.captures.op === "∉" ? "!" : ""}eb_in_dom_union_pairset(${m.captures.R}, ${m.captures.S}, ${m.captures.x})` },
-  // R10 range over union: x ∈ ran(R ∪ S)   (not followed by ∖ — that is A5)
-  { id: "R10", tier: 1, provenance: "raw-XML",
-    match: re(/(?<pkt>\w+)\s*∈\s*ran\((?<R>\w+)\s*∪\s*(?<S>\w+)\)(?!\s*∖)/),
-    emit: (m) => `eb_in_range_union(${m.captures.R}, ${m.captures.S}, ${m.captures.pkt})` },
-  // R14 domain anti-restriction (function remove): R := {k} ⩤ R
-  { id: "R14", tier: 1, provenance: "raw-XML",
-    match: re(/(?<R>\w+)\s*≔\s*\{(?<k>\w+)\}\s*⩤\s*\k<R>/),
-    emit: (m) => `${m.captures.R}.erase(${m.captures.k});` },
-  // R4 set remove: S := S ∖ {x}
-  { id: "R4", tier: 1, provenance: "raw-XML",
-    match: re(/(?<S>\w+)\s*≔\s*\k<S>\s*∖\s*\{(?<x>\w+)\}/),
-    emit: (m) => `${m.captures.S}.erase(${m.captures.x});` },
-  // R3 set insert: S := S ∪ {x}
-  { id: "R3", tier: 1, provenance: "raw-XML",
-    match: re(/(?<S>\w+)\s*≔\s*\k<S>\s*∪\s*\{(?<x>\w+)\}/),
-    emit: (m) => `${m.captures.S}.insert(${m.captures.x});` },
-  // R1 set membership (type guard): type(x) ∈ S
-  { id: "R1", tier: 1, provenance: "raw-XML",
-    match: re(/type\((?<x>\w+)\)\s*∈\s*(?<S>\w+)/),
-    emit: (m) => `${m.captures.S}.count(getType(${m.captures.x})) > 0` },
+  // ── MS7 product join: M ≔ M ∪ ({k} × s) ──
+  { id: "MS7", match: re(/^(?<M>\w+)\s*≔\s*\k<M>\s*∪\s*\(\s*\{\s*(?<k>\w+)\s*\}\s*×\s*(?<s>\w+)\s*\)$/),
+    emit: (m) => { const { M, k, s } = c(m); return `for (auto _v : ${s}) ${M}[${k}].insert(_v);`; } },
 
-  // ── Auxiliary (A1–A5) — completeness, not part of the contribution count ─
-  // A5 two-set difference: pkt ∈ ran(R ∪ S) ∖ f(d)
-  { id: "A5", tier: "aux", provenance: "raw-XML",
-    match: re(/(?<pkt>\w+)\s*∈\s*ran\((?<R>\w+)\s*∪\s*(?<S>\w+)\)\s*∖\s*(?<f>\w+)\((?<d>\w+)\)/),
-    emit: (m) => `eb_in_range_union(${m.captures.R}, ${m.captures.S}, ${m.captures.pkt}) && ${m.captures.f}.at(${m.captures.d}).count(${m.captures.pkt}) == 0` },
-  // A4 two-set union: S := S ∪ T  (T a set, not a singleton — those are R3)
-  { id: "A4", tier: "aux", provenance: "raw-XML",
-    match: re(/(?<S>\w+)\s*≔\s*\k<S>\s*∪\s*(?<T>\w+)\s*$/),
-    emit: (m) => `${m.captures.S}.insert(${m.captures.T}.begin(), ${m.captures.T}.end());` },
-  // A3 range membership: x ∈ ran(R)
-  { id: "A3", tier: "aux", provenance: "raw-XML",
-    match: re(/(?<x>\w+)\s*∈\s*ran\((?<R>\w+)\)/),
-    emit: (m) => `eb_in_range(${m.captures.R}, ${m.captures.x})` },
-  // A2 emptiness: S = ∅  /  S ≠ ∅
-  { id: "A2", tier: "aux", provenance: "raw-XML",
-    match: re(/^(?<S>\w+)\s*(?<op>=|≠)\s*∅$/),
-    emit: (m) => `${m.captures.op === "≠" ? "!" : ""}${m.captures.S}.empty()` },
-  // A1 cardinality: card(S)
-  { id: "A1", tier: "aux", provenance: "raw-XML",
-    match: re(/^card\((?<S>\w+)\)$/),
-    emit: (m) => `${m.captures.S}.size()` },
+  // ── MS2 per-key set insert: f(k) ≔ f(k) ∪ {x} ──
+  { id: "MS2", match: re(/^(?<f>\w+)\(\s*(?<k>\w+)\s*\)\s*≔\s*\k<f>\(\s*\k<k>\s*\)\s*∪\s*\{\s*(?<x>\w+)\s*\}$/),
+    emit: (m) => { const { f, k, x } = c(m); return `${f}[${k}].insert(${x});`; } },
 
-  // ── Extended executable forms (A6–A10) ─────────────────────────────────
-  // These cover the common single-clause guards/actions the frozen R1–R20
-  // catalog left unhandled. They are matched per-conjunct by the rule engine,
-  // which first skips pure typing predicates (x ∈ CARRIER), so a bare RHS here
-  // is always a machine variable.
-  //
-  // A7 plain function application (non-pair): y = f(x)   — distinct from R18's
-  // pair-keyed f(x↦s). A map-of-sets f yields a set; otherwise a scalar.
-  { id: "A7", tier: "aux", provenance: "raw-XML",
-    match: re(/^(?<y>\w+)\s*=\s*(?<f>\w+)\((?<x>\w+)\)$/),
-    emit: (m, enc) => enc(m.captures.f) === "map-of-sets"
-      ? `const std::set<int>& ${m.captures.y} = ${m.captures.f}.at(${m.captures.x});`
-      : `int ${m.captures.y} = ${m.captures.f}.at(${m.captures.x});` },
-  // A8 single-table domain membership: x ∈ dom(R) / x ∉ dom(R)  — distinct from
-  // R2 (pair x↦s ∈ dom(R)) and R12 (dom over a union).
-  { id: "A8", tier: "aux", provenance: "raw-XML",
-    match: re(/^(?<x>\w+)\s*(?<op>∈|∉)\s*dom\((?<R>\w+)\)$/),
-    emit: (m, enc) => enc(m.captures.R) === "pair-set"
-      ? `${m.captures.op === "∉" ? "!" : ""}eb_in_dom_pairset(${m.captures.R}, ${m.captures.x})`
-      : `${m.captures.R}.count(${m.captures.x}) ${m.captures.op === "∈" ? "> 0" : "== 0"}` },
-  // A6 bare set membership: x ∈ S / x ∉ S  (S a machine-variable set/relation).
-  { id: "A6", tier: "aux", provenance: "raw-XML",
-    match: re(/^(?<x>\w+)\s*(?<op>∈|∉)\s*(?<S>\w+)$/),
-    emit: (m) => `${m.captures.S}.count(${m.captures.x}) ${m.captures.op === "∈" ? "> 0" : "== 0"}` },
-  // A9 reset to empty: X ≔ ∅
-  { id: "A9", tier: "aux", provenance: "raw-XML",
-    match: re(/^(?<X>\w+)\s*≔\s*∅$/),
-    emit: (m) => `${m.captures.X}.clear();` },
-  // A10 total map-of-sets init: X ≔ A × {∅}  (every key maps to ∅; std::map
-  // yields the empty default lazily, so clear() is the faithful translation).
-  { id: "A10", tier: "aux", provenance: "raw-XML",
-    match: re(/^(?<X>\w+)\s*≔\s*(?<A>\w+)\s*×\s*\{\s*∅\s*\}$/),
-    emit: (m) => `${m.captures.X}.clear();` },
+  // ── MS3 per-key set remove: f(k) ≔ f(k) ∖ {x} ──
+  { id: "MS3-fn", match: re(/^(?<f>\w+)\(\s*(?<k>\w+)\s*\)\s*≔\s*\k<f>\(\s*\k<k>\s*\)\s*∖\s*\{\s*(?<x>\w+)\s*\}$/),
+    emit: (m) => { const { f, k, x } = c(m);
+      return `${f}[${k}].erase(${x}); if (${f}[${k}].empty()) ${f}.erase(${k});`; } },
+
+  // ── FN3 function set-update: f(k) ≔ v ──
+  { id: "FN3-app", match: re(/^(?<f>\w+)\(\s*(?<k>\w+)\s*\)\s*≔\s*(?<v>\w+)$/),
+    emit: (m) => { const { f, k, v } = c(m); return `${f}[${k}] = ${v};`; } },
+
+  // ── override with MISSING glyph: f ≔ f {k↦v}  (and the proper ⊴ form) ──
+  { id: "FN3-override", match: re(/^(?<f>\w+)\s*≔\s*\k<f>\s*(?:⊴\s*)?\{\s*(?<k>\w+)\s*↦\s*(?<v>\w+)\s*\}$/),
+    emit: (m) => { const { f, k, v } = c(m); return `${f}[${k}] = ${v};`; } },
+
+  // ── ∪ {a↦b}: pair-set insert (PS2) OR function-extend (FN3), by enc ──
+  { id: "UNION-pair", match: re(/^(?<R>\w+)\s*≔\s*\k<R>\s*∪\s*\{\s*(?<a>\w+)\s*↦\s*(?<b>\w+)\s*\}$/),
+    emit: (m, enc) => { const { R, a, b } = c(m);
+      return enc(R) === "function" ? `${R}[${a}] = ${b};` : `${R}.insert({${a}, ${b}});`; } },
+
+  // ── ∖ {a↦b}: pair-set erase (PS3) OR map-of-sets per-key remove (MS3), by enc ──
+  { id: "DIFF-pair", match: re(/^(?<R>\w+)\s*≔\s*\k<R>\s*∖\s*\{\s*(?<a>\w+)\s*↦\s*(?<b>\w+)\s*\}$/),
+    emit: (m, enc) => { const { R, a, b } = c(m);
+      return enc(R) === "map-of-sets"
+        ? `${R}[${a}].erase(${b}); if (${R}[${a}].empty()) ${R}.erase(${a});`
+        : `${R}.erase({${a}, ${b}});`; } },
+
+  // ── PS6 range subtraction: R ≔ R ⩥ {y} ──
+  { id: "PS6", match: re(/^(?<R>\w+)\s*≔\s*\k<R>\s*⩥\s*\{\s*(?<y>\w+)\s*\}$/),
+    emit: (m) => { const { R, y } = c(m);
+      return `for (auto it = ${R}.begin(); it != ${R}.end(); ) ` +
+             `it->second == ${y} ? it = ${R}.erase(it) : ++it;`; } },
+
+  // ── SET2/SET3 singleton union/diff on a plain set ──
+  { id: "SET2", match: re(/^(?<S>\w+)\s*≔\s*\k<S>\s*∪\s*\{\s*(?<x>\w+)\s*\}$/),
+    emit: (m) => { const { S, x } = c(m); return `${S}.insert(${x});`; } },
+  { id: "SET3", match: re(/^(?<S>\w+)\s*≔\s*\k<S>\s*∖\s*\{\s*(?<x>\w+)\s*\}$/),
+    emit: (m) => { const { S, x } = c(m); return `${S}.erase(${x});`; } },
+
+  // ── MS5 per-key emptiness: {k} ◁ M = ∅  /  ≠ ∅ ──
+  { id: "MS5", match: re(/^\{\s*(?<k>\w+)\s*\}\s*◁\s*(?<M>\w+)\s*(?<op>=|≠)\s*∅$/),
+    emit: (m) => { const { k, M, op } = c(m);
+      return op === "=" ? `(${M}.count(${k}) == 0 || ${M}.at(${k}).empty())`
+                        : `(${M}.count(${k}) > 0 && !${M}.at(${k}).empty())`; } },
+
+  // ── MS6 range of key restriction (equality guard): d = ran({k} ◁ M) ──
+  { id: "MS6", match: re(/^(?<d>\w+)\s*=\s*ran\(\s*\{\s*(?<k>\w+)\s*\}\s*◁\s*(?<M>\w+)\s*\)$/),
+    emit: (m) => { const { d, k, M } = c(m); return `${d} == ${M}.at(${k})`; } },
+
+  // ── MS1 per-key membership: x ∈ M(k) / ∉  (map-of-sets; M is not dom/ran) ──
+  { id: "MS1", match: re(/^(?<x>\w+)\s*(?<op>∈|∉)\s*(?!dom\(|ran\()(?<M>\w+)\(\s*(?<k>\w+)\s*\)$/),
+    emit: (m) => { const { x, op, M, k } = c(m);
+      return op === "∈" ? `(${M}.count(${k}) > 0 && ${M}.at(${k}).count(${x}) > 0)`
+                        : `(${M}.count(${k}) == 0 || ${M}.at(${k}).count(${x}) == 0)`; } },
+
+  // ── pair membership: a↦b ∈ R / ∉  (PS1) ──
+  { id: "PS1", match: re(/^(?<a>\w+)\s*↦\s*(?<b>\w+)\s*(?<op>∈|∉)\s*(?<R>\w+)$/),
+    emit: (m) => { const { a, b, op, R } = c(m);
+      return `${R}.count({${a}, ${b}}) ${op === "∈" ? "> 0" : "== 0"}`; } },
+
+  // ── domain membership: x ∈ dom(R) / ∉  (PS4 pair-set scan, else FN2 count) ──
+  { id: "DOM", match: re(/^(?<x>\w+)\s*(?<op>∈|∉)\s*dom\(\s*(?<R>\w+)\s*\)$/),
+    emit: (m, enc) => { const { x, op, R } = c(m);
+      if (enc(R) === "pair-set") return op === "∈" ? `inDom(${R}, ${x})` : `!inDom(${R}, ${x})`;
+      return `${R}.count(${x}) ${op === "∈" ? "> 0" : "== 0"}`; } },
+
+  // ── range membership: x ∈ ran(R) / ∉  (PS5 scan) ──
+  { id: "RAN", match: re(/^(?<x>\w+)\s*(?<op>∈|∉)\s*ran\(\s*(?<R>\w+)\s*\)$/),
+    emit: (m) => { const { x, op, R } = c(m);
+      return op === "∈" ? `inRan(${R}, ${x})` : `!inRan(${R}, ${x})`; } },
+
+  // ── CMP1 set-difference membership: x ∈ A ∖ B ──
+  { id: "CMP1", match: re(/^(?<x>\w+)\s*∈\s*(?<A>\w+)\s*∖\s*(?<B>\w+)$/),
+    emit: (m) => { const { x, A, B } = c(m); return `(${A}.count(${x}) > 0 && ${B}.count(${x}) == 0)`; } },
+
+  // ── FN1 application in an equality guard: y = f(x) ──
+  { id: "FN1", match: re(/^(?<y>\w+)\s*=\s*(?<f>\w+)\(\s*(?<x>\w+)\s*\)$/),
+    emit: (m) => { const { y, f, x } = c(m); return `${y} == ${f}.at(${x})`; } },
+
+  // ── function-value equality guard: f(k) = v ──
+  { id: "FN1-cmp", match: re(/^(?<f>\w+)\(\s*(?<k>\w+)\s*\)\s*=\s*(?<v>\w+)$/),
+    emit: (m) => { const { f, k, v } = c(m); return `${f}.at(${k}) == ${v}`; } },
+
+  // ── emptiness: S = ∅ / ≠ ∅  (SET4) ──
+  { id: "SET4", match: re(/^(?<S>\w+)\s*(?<op>=|≠)\s*∅$/),
+    emit: (m) => { const { S, op } = c(m); return `${op === "≠" ? "!" : ""}${S}.empty()`; } },
+
+  // ── bare membership: x ∈ S / ∉  (SET1) ──
+  { id: "SET1", match: re(/^(?<x>\w+)\s*(?<op>∈|∉)\s*(?<S>\w+)$/),
+    emit: (m) => { const { x, op, S } = c(m); return `${S}.count(${x}) ${op === "∈" ? "> 0" : "== 0"}`; } },
+
+  // ── scalar equality guard: a = b  (e.g. data = CTL_VAL) ──
+  { id: "EQ", match: re(/^(?<a>\w+)\s*=\s*(?<b>\w+)$/),
+    emit: (m) => { const { a, b } = c(m); return `${a} == ${b}`; } },
 ];
