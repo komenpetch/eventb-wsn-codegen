@@ -14,9 +14,11 @@ const re = (p: RegExp) => (expr: string): RuleMatch | null => {
 const c = (m: RuleMatch) => m.captures;
 
 // Ordered MOST-SPECIFIC-FIRST. The rule engine takes the first match per clause.
+// Brace interiors allow optional whitespace (\s*) because the raw Event-B
+// assignments carry irregular spacing, e.g. `sentUp ≔ sentUp ∪ {x↦ pkt  }`.
 export const RULES: Rule[] = [
   // ── CMP2 total-function init: f ≔ (A ∖ B) × {const}  (incl. const = ∅) ──
-  { id: "CMP2", match: re(/^(?<f>\w+)\s*≔\s*\((?<A>\w+)\s*∖\s*(?<B>\w+)\)\s*×\s*\{\s*(?<v>∅|\w+)\s*\}$/),
+  { id: "CMP2", match: re(/^(?<f>\w+)\s*≔\s*\(\s*(?<A>\w+)\s*∖\s*(?<B>\w+)\s*\)\s*×\s*\{\s*(?<v>∅|\w+)\s*\}$/),
     emit: (m) => {
       const { f, A, B, v } = c(m);
       const val = v === "∅" ? "{}" : v;
@@ -28,62 +30,62 @@ export const RULES: Rule[] = [
     emit: (m) => `${c(m).X}.clear();` },
 
   // ── MS7 product join: M ≔ M ∪ ({k} × s) ──
-  { id: "MS7", match: re(/^(?<M>\w+)\s*≔\s*\k<M>\s*∪\s*\(\{(?<k>\w+)\}\s*×\s*(?<s>\w+)\)$/),
+  { id: "MS7", match: re(/^(?<M>\w+)\s*≔\s*\k<M>\s*∪\s*\(\s*\{\s*(?<k>\w+)\s*\}\s*×\s*(?<s>\w+)\s*\)$/),
     emit: (m) => { const { M, k, s } = c(m); return `for (auto _v : ${s}) ${M}[${k}].insert(_v);`; } },
 
   // ── MS2 per-key set insert: f(k) ≔ f(k) ∪ {x} ──
-  { id: "MS2", match: re(/^(?<f>\w+)\((?<k>\w+)\)\s*≔\s*\k<f>\(\k<k>\)\s*∪\s*\{(?<x>\w+)\}$/),
+  { id: "MS2", match: re(/^(?<f>\w+)\(\s*(?<k>\w+)\s*\)\s*≔\s*\k<f>\(\s*\k<k>\s*\)\s*∪\s*\{\s*(?<x>\w+)\s*\}$/),
     emit: (m) => { const { f, k, x } = c(m); return `${f}[${k}].insert(${x});`; } },
 
   // ── MS3 per-key set remove: f(k) ≔ f(k) ∖ {x} ──
-  { id: "MS3-fn", match: re(/^(?<f>\w+)\((?<k>\w+)\)\s*≔\s*\k<f>\(\k<k>\)\s*∖\s*\{(?<x>\w+)\}$/),
+  { id: "MS3-fn", match: re(/^(?<f>\w+)\(\s*(?<k>\w+)\s*\)\s*≔\s*\k<f>\(\s*\k<k>\s*\)\s*∖\s*\{\s*(?<x>\w+)\s*\}$/),
     emit: (m) => { const { f, k, x } = c(m);
       return `${f}[${k}].erase(${x}); if (${f}[${k}].empty()) ${f}.erase(${k});`; } },
 
   // ── FN3 function set-update: f(k) ≔ v ──
-  { id: "FN3-app", match: re(/^(?<f>\w+)\((?<k>\w+)\)\s*≔\s*(?<v>\w+)$/),
+  { id: "FN3-app", match: re(/^(?<f>\w+)\(\s*(?<k>\w+)\s*\)\s*≔\s*(?<v>\w+)$/),
     emit: (m) => { const { f, k, v } = c(m); return `${f}[${k}] = ${v};`; } },
 
   // ── override with MISSING glyph: f ≔ f {k↦v}  (and the proper ⊴ form) ──
-  { id: "FN3-override", match: re(/^(?<f>\w+)\s*≔\s*\k<f>\s*(?:⊴\s*)?\{(?<k>\w+)\s*↦\s*(?<v>\w+)\}$/),
+  { id: "FN3-override", match: re(/^(?<f>\w+)\s*≔\s*\k<f>\s*(?:⊴\s*)?\{\s*(?<k>\w+)\s*↦\s*(?<v>\w+)\s*\}$/),
     emit: (m) => { const { f, k, v } = c(m); return `${f}[${k}] = ${v};`; } },
 
   // ── ∪ {a↦b}: pair-set insert (PS2) OR function-extend (FN3), by enc ──
-  { id: "UNION-pair", match: re(/^(?<R>\w+)\s*≔\s*\k<R>\s*∪\s*\{(?<a>\w+)\s*↦\s*(?<b>\w+)\}$/),
+  { id: "UNION-pair", match: re(/^(?<R>\w+)\s*≔\s*\k<R>\s*∪\s*\{\s*(?<a>\w+)\s*↦\s*(?<b>\w+)\s*\}$/),
     emit: (m, enc) => { const { R, a, b } = c(m);
       return enc(R) === "function" ? `${R}[${a}] = ${b};` : `${R}.insert({${a}, ${b}});`; } },
 
   // ── ∖ {a↦b}: pair-set erase (PS3) OR map-of-sets per-key remove (MS3), by enc ──
-  { id: "DIFF-pair", match: re(/^(?<R>\w+)\s*≔\s*\k<R>\s*∖\s*\{(?<a>\w+)\s*↦\s*(?<b>\w+)\}$/),
+  { id: "DIFF-pair", match: re(/^(?<R>\w+)\s*≔\s*\k<R>\s*∖\s*\{\s*(?<a>\w+)\s*↦\s*(?<b>\w+)\s*\}$/),
     emit: (m, enc) => { const { R, a, b } = c(m);
       return enc(R) === "map-of-sets"
         ? `${R}[${a}].erase(${b}); if (${R}[${a}].empty()) ${R}.erase(${a});`
         : `${R}.erase({${a}, ${b}});`; } },
 
   // ── PS6 range subtraction: R ≔ R ⩥ {y} ──
-  { id: "PS6", match: re(/^(?<R>\w+)\s*≔\s*\k<R>\s*⩥\s*\{(?<y>\w+)\}$/),
+  { id: "PS6", match: re(/^(?<R>\w+)\s*≔\s*\k<R>\s*⩥\s*\{\s*(?<y>\w+)\s*\}$/),
     emit: (m) => { const { R, y } = c(m);
       return `for (auto it = ${R}.begin(); it != ${R}.end(); ) ` +
              `it->second == ${y} ? it = ${R}.erase(it) : ++it;`; } },
 
   // ── SET2/SET3 singleton union/diff on a plain set ──
-  { id: "SET2", match: re(/^(?<S>\w+)\s*≔\s*\k<S>\s*∪\s*\{(?<x>\w+)\}$/),
+  { id: "SET2", match: re(/^(?<S>\w+)\s*≔\s*\k<S>\s*∪\s*\{\s*(?<x>\w+)\s*\}$/),
     emit: (m) => { const { S, x } = c(m); return `${S}.insert(${x});`; } },
-  { id: "SET3", match: re(/^(?<S>\w+)\s*≔\s*\k<S>\s*∖\s*\{(?<x>\w+)\}$/),
+  { id: "SET3", match: re(/^(?<S>\w+)\s*≔\s*\k<S>\s*∖\s*\{\s*(?<x>\w+)\s*\}$/),
     emit: (m) => { const { S, x } = c(m); return `${S}.erase(${x});`; } },
 
   // ── MS5 per-key emptiness: {k} ◁ M = ∅  /  ≠ ∅ ──
-  { id: "MS5", match: re(/^\{(?<k>\w+)\}\s*◁\s*(?<M>\w+)\s*(?<op>=|≠)\s*∅$/),
+  { id: "MS5", match: re(/^\{\s*(?<k>\w+)\s*\}\s*◁\s*(?<M>\w+)\s*(?<op>=|≠)\s*∅$/),
     emit: (m) => { const { k, M, op } = c(m);
       return op === "=" ? `(${M}.count(${k}) == 0 || ${M}.at(${k}).empty())`
                         : `(${M}.count(${k}) > 0 && !${M}.at(${k}).empty())`; } },
 
   // ── MS6 range of key restriction (equality guard): d = ran({k} ◁ M) ──
-  { id: "MS6", match: re(/^(?<d>\w+)\s*=\s*ran\(\{(?<k>\w+)\}\s*◁\s*(?<M>\w+)\)$/),
+  { id: "MS6", match: re(/^(?<d>\w+)\s*=\s*ran\(\s*\{\s*(?<k>\w+)\s*\}\s*◁\s*(?<M>\w+)\s*\)$/),
     emit: (m) => { const { d, k, M } = c(m); return `${d} == ${M}.at(${k})`; } },
 
   // ── MS1 per-key membership: x ∈ M(k) / ∉  (map-of-sets; M is not dom/ran) ──
-  { id: "MS1", match: re(/^(?<x>\w+)\s*(?<op>∈|∉)\s*(?!dom\(|ran\()(?<M>\w+)\((?<k>\w+)\)$/),
+  { id: "MS1", match: re(/^(?<x>\w+)\s*(?<op>∈|∉)\s*(?!dom\(|ran\()(?<M>\w+)\(\s*(?<k>\w+)\s*\)$/),
     emit: (m) => { const { x, op, M, k } = c(m);
       return op === "∈" ? `(${M}.count(${k}) > 0 && ${M}.at(${k}).count(${x}) > 0)`
                         : `(${M}.count(${k}) == 0 || ${M}.at(${k}).count(${x}) == 0)`; } },
@@ -94,13 +96,13 @@ export const RULES: Rule[] = [
       return `${R}.count({${a}, ${b}}) ${op === "∈" ? "> 0" : "== 0"}`; } },
 
   // ── domain membership: x ∈ dom(R) / ∉  (PS4 pair-set scan, else FN2 count) ──
-  { id: "DOM", match: re(/^(?<x>\w+)\s*(?<op>∈|∉)\s*dom\((?<R>\w+)\)$/),
+  { id: "DOM", match: re(/^(?<x>\w+)\s*(?<op>∈|∉)\s*dom\(\s*(?<R>\w+)\s*\)$/),
     emit: (m, enc) => { const { x, op, R } = c(m);
       if (enc(R) === "pair-set") return op === "∈" ? `inDom(${R}, ${x})` : `!inDom(${R}, ${x})`;
       return `${R}.count(${x}) ${op === "∈" ? "> 0" : "== 0"}`; } },
 
   // ── range membership: x ∈ ran(R) / ∉  (PS5 scan) ──
-  { id: "RAN", match: re(/^(?<x>\w+)\s*(?<op>∈|∉)\s*ran\((?<R>\w+)\)$/),
+  { id: "RAN", match: re(/^(?<x>\w+)\s*(?<op>∈|∉)\s*ran\(\s*(?<R>\w+)\s*\)$/),
     emit: (m) => { const { x, op, R } = c(m);
       return op === "∈" ? `inRan(${R}, ${x})` : `!inRan(${R}, ${x})`; } },
 
@@ -109,11 +111,11 @@ export const RULES: Rule[] = [
     emit: (m) => { const { x, A, B } = c(m); return `(${A}.count(${x}) > 0 && ${B}.count(${x}) == 0)`; } },
 
   // ── FN1 application in an equality guard: y = f(x) ──
-  { id: "FN1", match: re(/^(?<y>\w+)\s*=\s*(?<f>\w+)\((?<x>\w+)\)$/),
+  { id: "FN1", match: re(/^(?<y>\w+)\s*=\s*(?<f>\w+)\(\s*(?<x>\w+)\s*\)$/),
     emit: (m) => { const { y, f, x } = c(m); return `${y} == ${f}.at(${x})`; } },
 
   // ── function-value equality guard: f(k) = v ──
-  { id: "FN1-cmp", match: re(/^(?<f>\w+)\((?<k>\w+)\)\s*=\s*(?<v>\w+)$/),
+  { id: "FN1-cmp", match: re(/^(?<f>\w+)\(\s*(?<k>\w+)\s*\)\s*=\s*(?<v>\w+)$/),
     emit: (m) => { const { f, k, v } = c(m); return `${f}.at(${k}) == ${v}`; } },
 
   // ── emptiness: S = ∅ / ≠ ∅  (SET4) ──
