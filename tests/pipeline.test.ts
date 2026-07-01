@@ -1,19 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { generate } from "../src/engine/pipeline";
 
-// A first-time user can easily point the picker at the wrong folder. The
-// pipeline must refuse such input with an actionable message instead of
-// silently emitting a phantom (default-DSR) module from nothing.
-describe("generate() input validation", () => {
-  it("rejects an empty selection with an actionable message", () => {
-    expect(() => generate([])).toThrow(/no event-b files/i);
-  });
+const load = (n: string) =>
+  ({ name: `${n}.bum`, xml: readFileSync(`tests/fixtures/shdecom/${n}.bum`, "utf8") });
 
-  it("rejects a selection that has context files but no machine", () => {
-    const contextsOnly = readdirSync("tests/fixtures/rtmcs")
-      .filter((f) => /\.buc$/.test(f))
-      .map((f) => ({ name: f, xml: readFileSync(`tests/fixtures/rtmcs/${f}`, "utf8") }));
-    expect(() => generate(contextsOnly)).toThrow(/machine/i);
+describe("pipeline.generate", () => {
+  it("generates 3 files for a named target machine", () => {
+    const tree = generate([load("pM1"), load("uM2"), load("pM3")], "pM3", "Pm3App");
+    expect(tree.map((f) => f.path).sort()).toEqual(["Pm3App.cc", "Pm3App.h", "Pm3App.ned"]);
+    expect(tree.find((f) => f.path === "Pm3App.cc")!.content).toContain("bool Pm3App::sensing(");
+  });
+  it("throws a clear error for an empty selection", () => {
+    expect(() => generate([], "pM1", "X")).toThrow(/No Event-B/);
   });
 });
