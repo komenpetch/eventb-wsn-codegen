@@ -37,8 +37,10 @@ function cppType(form: EncodingForm, inv: string | undefined): string {
 function params(ev: { parameters: string[]; guards: string[] }): string {
   const typeOf = (p: string): string => {
     for (const g of ev.guards) {
-      // Set-typed param: `p ∈ ℙ(ND)` or the set-builder `p ∈ {n∣ … ℙ(ND) …}`.
-      if (new RegExp(`\\b${p}\\s*∈\\s*(?:ℙ\\(|\\{[^}]*ℙ\\()`).test(g)) return "const std::set<Node>&";
+      // Set-typed param: `p ∈ ℙ(T)` or the set-builder `p ∈ {n∣ … ℙ(T) …}`.
+      // Capture T and alias it, so a set over PKT/ℤ isn't mis-typed as Node.
+      const setM = new RegExp(`\\b${p}\\s*∈\\s*(?:ℙ\\(|\\{[^}]*ℙ\\()\\s*(\\w+|ℤ)`).exec(g);
+      if (setM) return `const std::set<${alias(setM[1])}>&`;
       const m = new RegExp(`\\b${p}\\s*∈\\s*(\\w+|ℤ)`).exec(g);
       if (m) return alias(m[1]);
     }

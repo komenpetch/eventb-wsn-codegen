@@ -1,10 +1,10 @@
 # wsn-codegen
 
 Generate compilable **OMNeT++/INET 4.5** C++ from a pattern-based **Rodin Event-B** wireless-sensor-network
-model. Load the shared-decomposition pattern machines (`pM1` / `uM2` / `pM3`), pick a **target machine**
-and an **output name**, and the tool flattens the machine's refinement chain and emits exactly three
-files — `<Name>.h`, `<Name>.cc`, `<Name>.ned` — an `inet::RoutingProtocolBase` subclass ready to drop
-into an INET simulation.
+model. Load a Rodin project — any refinement chain, names are not fixed (`pM1` / `uM2` / `pM3` / `uM4`
+/ `pM5` / …) — and the tool generates, for **every machine** it finds, three files — `<Name>.h`,
+`<Name>.cc`, `<Name>.ned` — an `inet::RoutingProtocolBase` subclass, each flattened over its own
+refinement chain, ready to drop into an INET simulation.
 
 It is a **client-side web app** (TypeScript + React + Vite) — nothing is uploaded; parsing and code
 generation run entirely in your browser. A headless CLI + compile gate are included for scripting.
@@ -42,10 +42,11 @@ npm run preview     # http://localhost:4173/wsn-codegen/
 
 1. Click **Load Event-B folder** (or **load a .zip**, or drag a `.zip` onto the page). No model handy?
    Use the bundled **`tests/fixtures/shdecom`** folder (`pM1.bum` / `uM2.bum` / `pM3.bum`).
-2. Pick a **target machine** from the dropdown (the detected machine labels) and an **output name**
-   (e.g. `Pm3App`). The target is flattened over its full `refines` chain, base first.
-3. Click **Generate → save** and choose where to write the three files:
-   - **Chrome / Edge** — a native folder picker writes the files directly (File System Access API).
+2. The tool lists **every machine** it detects and the class names it will emit. Click
+   **Generate all → save** — it generates one class per machine (each flattened over its own
+   `refines` chain, named `<Label>App`).
+3. Choose where to write the files:
+   - **Chrome / Edge** — a native folder picker writes them directly (File System Access API).
    - **Firefox / Safari / mobile** — the files download as **`generated-cpp.zip`**.
 
 The on-screen log reports each step. Cancelling a picker logs `Cancelled.` (not an error).
@@ -53,13 +54,15 @@ The on-screen log reports each step. Cancelling a picker logs `Cancelled.` (not 
 ## Using the CLI + compile gate
 
 ```bash
-npm run generate            # writes Pm1App/Um2App/Pm3App.{h,cc,ned} + shared headers to out/
+npm run generate                        # tests/fixtures/shdecom → out/
+npm run generate -- <inputDir> <outDir> # any Rodin project (every machine found)
 ```
 
-`scripts/generate.ts` generates the three `shdecom` pattern machines and stages `eb_helpers.h` /
+`scripts/generate.ts` reads a folder of Event-B `.bum` files and generates a class for **every
+machine** it finds (each flattened over its own `refines` chain), staging `eb_helpers.h` /
 `eb_context.h` next to them. Then syntax-check each `.cc` against real INET 4.5 headers — the
 project's single measurable success criterion (Form 01 §6). The exact toolchain paths and command are
-in **[scripts/compile-gate.md](scripts/compile-gate.md)**; all three machines pass `-fsyntax-only`.
+in **[scripts/compile-gate.md](scripts/compile-gate.md)**; every generated machine passes `-fsyntax-only`.
 
 ---
 
@@ -116,7 +119,7 @@ out/            local-only generator output (gitignored)
 | `npm run preview` | serve the production build locally |
 | `npm test` | run the vitest suite (engine unit tests + generation snapshots) |
 | `npm run lint` | ESLint |
-| `npm run generate` | generate the three `shdecom` machines + headers into `out/` |
+| `npm run generate` | generate every machine in a folder (+ shared headers) into `out/` |
 
 Pushing to `main` deploys the built app to GitHub Pages via `.github/workflows/deploy.yml`
 (it runs the tests and build first).

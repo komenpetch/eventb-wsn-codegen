@@ -15,15 +15,16 @@ application-layer `.cc` against the real INET 4.5 headers.
 ## Run
 
 ```bash
-# 1. Generate the three shDecom6_2 machines + shared headers into out/
-npm run generate
+# 1. Generate every machine in the input folder + shared headers into out/
+npm run generate                        # tests/fixtures/shdecom → out/
+# npm run generate -- <inputDir> <out>  # any Rodin project
 
 # 2. Syntax-check each generated .cc against INET (exit 0 = pass)
 CLANG="C:/Users/Komen/Desktop/omnetpp-6.3.0/tools/win32.x86_64/clang64/bin/clang++.exe"
 INET_SRC="C:/Users/Komen/Desktop/Proj/Simulation/inet4.5/src"
 OPP_INC="C:/Users/Komen/Desktop/omnetpp-6.3.0/include"
-for app in Pm1App Um2App Pm3App; do
-  "$CLANG" -fsyntax-only -std=c++17 -DINET_IMPORT -I out -I "$INET_SRC" -I "$OPP_INC" out/$app.cc
+for cc in out/*.cc; do
+  "$CLANG" -fsyntax-only -std=c++17 -DINET_IMPORT -I out -I "$INET_SRC" -I "$OPP_INC" "$cc"
 done
 ```
 
