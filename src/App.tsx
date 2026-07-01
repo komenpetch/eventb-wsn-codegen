@@ -1,5 +1,5 @@
 import { useRef, useState, type DragEvent } from "react";
-import { generateAll, machineNames, defaultName } from "./engine/pipeline";
+import { generateMerged, machineNames, leafMachine, defaultName } from "./engine/pipeline";
 import { readFolder, readZip, writeTree } from "./io/fileOutput";
 
 type EbFiles = { name: string; xml: string }[];
@@ -10,12 +10,14 @@ export default function App() {
   const [dragging, setDragging] = useState(false);
   const [files, setFiles] = useState<EbFiles>([]);
   const [machines, setMachines] = useState<string[]>([]);
+  const [outputName, setOutputName] = useState("");
   const zipInput = useRef<HTMLInputElement>(null);
   const append = (s: string) => setLog((l) => [...l, s]);
 
   // Load Event-B files from any source (folder picker, zip button, drag-drop)
-  // and detect every machine in the project. The tool is name-agnostic — any
-  // refinement chain (pM1/uM2/pM3/uM4/pM5/…) is supported.
+  // and detect every machine. The tool is name-agnostic — any refinement chain
+  // (pM1/uM2/pM3/uM4/pM5/…) is supported. The output name defaults to the
+  // most-refined (leaf) machine, which the whole project merges into.
   async function loadWith(read: () => Promise<EbFiles>) {
     setBusy(true);
     try {
@@ -23,6 +25,7 @@ export default function App() {
       const names = machineNames(f);
       setFiles(f);
       setMachines(names);
+      setOutputName(names.length ? defaultName(leafMachine(f)) : "");
       append(`Loaded ${f.length} file(s); machines: ${names.join(", ") || "(none found)"}.`);
     } catch (e) {
       // A cancelled picker rejects with AbortError — a normal user choice.
@@ -33,18 +36,19 @@ export default function App() {
     }
   }
 
-  // Generate a class for EVERY machine in the project (each flattened over its
-  // own refines chain), then let the user save the whole set.
+  // Merge the whole project into one module (the most-refined machine, flattened
+  // over its refines chain) and let the user save the three files.
   async function runGenerate() {
     if (!files.length) return append("Load Event-B files first.");
+    if (!outputName.trim()) return append("Enter an output name.");
     setBusy(true);
     try {
-      append(`Generating ${machines.length} machine(s)…`);
-      const tree = generateAll(files);
+      append(`Merging ${machines.length} machine(s) into ${outputName.trim()}…`);
+      const tree = generateMerged(files, outputName.trim());
       const mode = await writeTree(tree);
       append(
         mode === "folder"
-          ? `✓ Wrote ${tree.length} files to chosen folder.`
+          ? `✓ Wrote ${tree.length} files (${tree.map((f) => f.path).join(", ")}) to chosen folder.`
           : `✓ Downloaded generated-cpp.zip (${tree.length} files).`,
       );
     } catch (e) {
@@ -99,10 +103,10 @@ export default function App() {
       <div className="mt-4 max-w-2xl space-y-2 text-sm text-gray-700">
         <p>
           Load a folder of Event-B <code>.bum</code> files (a Rodin project export) — or a{" "}
-          <code>.zip</code> of that project. The tool detects <strong>every machine</strong> in the
-          project and generates a class for each, flattening its refinement chain and emitting three
-          files — <code>&lt;Name&gt;.h</code>, <code>&lt;Name&gt;.cc</code>, <code>&lt;Name&gt;.ned</code>{" "}
-          — to a folder you choose (Chrome/Edge) or a downloaded zip. Any refinement chain
+          <code>.zip</code> of that project. The tool detects every machine, <strong>merges the whole
+          refinement chain</strong> into one module, and emits exactly three files —{" "}
+          <code>&lt;Name&gt;.h</code>, <code>&lt;Name&gt;.cc</code>, <code>&lt;Name&gt;.ned</code> — to a
+          folder you choose (Chrome/Edge) or a downloaded zip. Any chain
           (<code>pM1/uM2/pM3/uM4/pM5/…</code>) works — names are not fixed.
         </p>
       </div>
@@ -137,17 +141,28 @@ export default function App() {
       <p className="mt-2 text-xs text-gray-500">…or drag a .zip anywhere onto this page.</p>
 
       {machines.length > 0 && (
-        <div className="mt-5 max-w-2xl rounded border border-gray-200 bg-white p-4">
-          <p className="text-sm text-gray-700">
-            <strong>{machines.length} machine(s)</strong> → will generate:{" "}
-            {machines.map((m) => defaultName(m)).join(", ")}
+        <div className="mt-5 flex max-w-2xl flex-wrap items-end gap-4 rounded border border-gray-200 bg-white p-4">
+          <p className="w-full text-sm text-gray-700">
+            <strong>{machines.length} machine(s)</strong> ({machines.join(" → ")}) → merged into one
+            module ({outputName || "…"}.h/.cc/.ned).
           </p>
+          <label className="flex flex-col gap-1 text-sm text-gray-700">
+            Output name
+            <input
+              type="text"
+              value={outputName}
+              disabled={busy}
+              onChange={(e) => setOutputName(e.target.value)}
+              placeholder="Pm3App"
+              className="rounded border border-gray-300 px-2 py-1"
+            />
+          </label>
           <button
             onClick={() => void runGenerate()}
             disabled={busy}
-            className="mt-3 rounded bg-green-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded bg-green-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {busy ? "Working…" : "Generate all → save"}
+            {busy ? "Working…" : "Generate → save"}
           </button>
         </div>
       )}

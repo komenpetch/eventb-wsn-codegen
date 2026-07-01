@@ -2,9 +2,9 @@
 
 Generate compilable **OMNeT++/INET 4.5** C++ from a pattern-based **Rodin Event-B** wireless-sensor-network
 model. Load a Rodin project — any refinement chain, names are not fixed (`pM1` / `uM2` / `pM3` / `uM4`
-/ `pM5` / …) — and the tool generates, for **every machine** it finds, three files — `<Name>.h`,
-`<Name>.cc`, `<Name>.ned` — an `inet::RoutingProtocolBase` subclass, each flattened over its own
-refinement chain, ready to drop into an INET simulation.
+/ `pM5` / …) — and the tool **merges the whole chain** into one `inet::RoutingProtocolBase` module,
+emitting exactly three files — `<Name>.h`, `<Name>.cc`, `<Name>.ned` — ready to drop into an INET
+simulation. (The merged module is the most-refined machine, flattened over its refinement chain.)
 
 It is a **client-side web app** (TypeScript + React + Vite) — nothing is uploaded; parsing and code
 generation run entirely in your browser. A headless CLI + compile gate are included for scripting.
@@ -42,10 +42,10 @@ npm run preview     # http://localhost:4173/wsn-codegen/
 
 1. Click **Load Event-B folder** (or **load a .zip**, or drag a `.zip` onto the page). No model handy?
    Use the bundled **`tests/fixtures/shdecom`** folder (`pM1.bum` / `uM2.bum` / `pM3.bum`).
-2. The tool lists **every machine** it detects and the class names it will emit. Click
-   **Generate all → save** — it generates one class per machine (each flattened over its own
-   `refines` chain, named `<Label>App`).
-3. Choose where to write the files:
+2. The tool lists **every machine** it detects and the module they merge into (the most-refined
+   machine; the output name defaults to `<Leaf>App` and is editable). Click **Generate → save** —
+   it merges the whole chain into one module.
+3. Choose where to write the three files:
    - **Chrome / Edge** — a native folder picker writes them directly (File System Access API).
    - **Firefox / Safari / mobile** — the files download as **`generated-cpp.zip`**.
 
@@ -58,15 +58,15 @@ npm run generate                        # tests/fixtures/shdecom → out/
 npm run generate -- <inputDir> <outDir> # any Rodin project (every machine found)
 ```
 
-`scripts/generate.ts` reads a folder of Event-B `.bum` files and generates a class for **every
-machine** it finds (each flattened over its own `refines` chain), staging `eb_helpers.h` /
-`eb_context.h` next to them. Then syntax-check each `.cc` against real INET 4.5 headers — the
-project's single measurable success criterion (Form 01 §6). The exact toolchain paths and command are
-in **[scripts/compile-gate.md](scripts/compile-gate.md)**; every generated machine passes `-fsyntax-only`.
+`scripts/generate.ts` reads a folder of Event-B `.bum` files, **merges the whole refinement chain**
+into one module (the most-refined machine, flattened), and stages `eb_helpers.h` / `eb_context.h`
+next to it. Then syntax-check the generated `.cc` against real INET 4.5 headers — the project's
+single measurable success criterion (Form 01 §6). The exact toolchain paths and command are in
+**[scripts/compile-gate.md](scripts/compile-gate.md)**; the merged module passes `-fsyntax-only`.
 
 ---
 
-## Output: three files per machine
+## Output: three files (the merged module)
 
 | File | Role |
 |---|---|
@@ -119,7 +119,7 @@ out/            local-only generator output (gitignored)
 | `npm run preview` | serve the production build locally |
 | `npm test` | run the vitest suite (engine unit tests + generation snapshots) |
 | `npm run lint` | ESLint |
-| `npm run generate` | generate every machine in a folder (+ shared headers) into `out/` |
+| `npm run generate` | merge a project into one module (+ shared headers) into `out/` |
 
 Pushing to `main` deploys the built app to GitHub Pages via `.github/workflows/deploy.yml`
 (it runs the tests and build first).

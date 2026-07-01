@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { generate, generateAll, machineNames, defaultName } from "../src/engine/pipeline";
+import {
+  generate, generateMerged, machineNames, leafMachine, defaultName,
+} from "../src/engine/pipeline";
 
 const load = (n: string) =>
   ({ name: `${n}.bum`, xml: readFileSync(`tests/fixtures/shdecom/${n}.bum`, "utf8") });
@@ -17,9 +19,13 @@ describe("pipeline.generate (single target)", () => {
   });
 });
 
-describe("pipeline.machineNames / defaultName", () => {
+describe("pipeline.machineNames / leafMachine / defaultName", () => {
   it("lists every machine in the project (name-agnostic)", () => {
     expect(machineNames(all())).toEqual(["pM1", "uM2", "pM3"]);
+  });
+  it("finds the most-refined (leaf) machine regardless of file order", () => {
+    expect(leafMachine(all())).toBe("pM3");
+    expect(leafMachine([load("pM3"), load("pM1"), load("uM2")])).toBe("pM3");
   });
   it("derives a default C++ name per machine label", () => {
     expect(defaultName("pM3")).toBe("Pm3App");
@@ -27,23 +33,25 @@ describe("pipeline.machineNames / defaultName", () => {
   });
 });
 
-describe("pipeline.generateAll (every machine)", () => {
-  it("emits three files for EACH machine, each flattened over its own chain", () => {
-    const tree = generateAll(all());
-    expect(tree.map((f) => f.path).sort()).toEqual([
-      "Pm1App.cc", "Pm1App.h", "Pm1App.ned",
-      "Pm3App.cc", "Pm3App.h", "Pm3App.ned",
-      "Um2App.cc", "Um2App.h", "Um2App.ned",
-    ]);
-    // The leaf (pM3) is the complete model — it carries the sensing state pM1 lacks.
-    expect(tree.find((f) => f.path === "Pm3App.cc")!.content).toContain("bool Pm3App::sensing(");
-    expect(tree.find((f) => f.path === "Pm1App.cc")!.content).not.toContain("sensing(");
+describe("pipeline.generateMerged (whole project → one module)", () => {
+  it("emits exactly 3 files, merging the chain into the leaf machine", () => {
+    const tree = generateMerged(all());
+    expect(tree.map((f) => f.path).sort()).toEqual(["Pm3App.cc", "Pm3App.h", "Pm3App.ned"]);
+    // The merged module carries state/events from across the whole chain: the
+    // sensing event added at pM3 AND events introduced back at pM1.
+    const cc = tree.find((f) => f.path === "Pm3App.cc")!.content;
+    expect(cc).toContain("bool Pm3App::sensing(");   // added at pM3 (leaf)
+    expect(cc).toContain("bool Pm3App::send_up(");   // introduced at pM1 (base)
   });
-  it("honors a custom naming function", () => {
-    const tree = generateAll([load("pM1")], (m) => `WSN_${m}`);
-    expect(tree.map((f) => f.path).sort()).toEqual(["WSN_pM1.cc", "WSN_pM1.h", "WSN_pM1.ned"]);
+  it("merges regardless of file order (leaf is content, not position)", () => {
+    const tree = generateMerged([load("pM3"), load("pM1"), load("uM2")]);
+    expect(tree.map((f) => f.path).sort()).toEqual(["Pm3App.cc", "Pm3App.h", "Pm3App.ned"]);
+  });
+  it("honors a custom output name", () => {
+    const tree = generateMerged(all(), "WsnApp");
+    expect(tree.map((f) => f.path).sort()).toEqual(["WsnApp.cc", "WsnApp.h", "WsnApp.ned"]);
   });
   it("throws a clear error for an empty selection", () => {
-    expect(() => generateAll([])).toThrow(/No Event-B/);
+    expect(() => generateMerged([])).toThrow(/No Event-B/);
   });
 });

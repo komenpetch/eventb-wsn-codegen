@@ -15,7 +15,7 @@ application-layer `.cc` against the real INET 4.5 headers.
 ## Run
 
 ```bash
-# 1. Generate every machine in the input folder + shared headers into out/
+# 1. Merge the project into one module + shared headers into out/
 npm run generate                        # tests/fixtures/shdecom → out/
 # npm run generate -- <inputDir> <out>  # any Rodin project
 
@@ -35,15 +35,13 @@ mis-expand. `-I out` lets each `.cc` resolve `eb_helpers.h` / `eb_context.h`
 
 ## Result (2026-07-01)
 
-All three machines pass `-fsyntax-only` (exit 0):
+The merged module passes `-fsyntax-only` (exit 0):
 
-| Machine | Output | Gate |
-|---|---|---|
-| pM1 (base) | `Pm1App.{h,cc,ned}` | ✓ exit 0 |
-| uM2 (pM1→uM2) | `Um2App.{h,cc,ned}` | ✓ exit 0 |
-| pM3 (pM1→uM2→pM3) | `Pm3App.{h,cc,ned}` | ✓ exit 0 |
+| Project | Merged into | Output | Gate |
+|---|---|---|---|
+| shDecom6_2 (pM1→uM2→pM3) | pM3 (leaf) | `Pm3App.{h,cc,ned}` | ✓ exit 0 |
 
-Each generated class is an `inet::RoutingProtocolBase` subclass (a routing app
+The generated class is an `inet::RoutingProtocolBase` subclass (a routing app
 over UDP) with the four `OperationalBase` overrides (`handleMessageWhenUp`,
 `handleStartOperation`, `handleStopOperation`, `handleCrashOperation`) and a
 public constructor; each Event-B event becomes a guarded `bool` method. The

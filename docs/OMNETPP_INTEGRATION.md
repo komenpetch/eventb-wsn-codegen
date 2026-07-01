@@ -1,6 +1,7 @@
 # Generated output — OMNeT++/INET 4.5 integration
 
-The `wsn-codegen` generator emits, **per machine** in a project, three files:
+The `wsn-codegen` generator **merges a project's refinement chain** into one module (the
+most-refined machine, flattened) and emits three files:
 
 | File | Role |
 |---|---|
@@ -44,7 +45,7 @@ done
 ```
 
 `-DINET_IMPORT` and `-I "$OPP_INC"` are mandatory (otherwise `omnetpp.h` is not found and INET's
-export macros mis-expand). **Status: all generated machines pass, exit 0.** See
+export macros mis-expand). **Status: the merged module passes, exit 0.** See
 [`scripts/compile-gate.md`](../scripts/compile-gate.md).
 
 ## Full run (compile + link + execute) — hand-completion step
