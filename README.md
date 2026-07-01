@@ -1,20 +1,19 @@
-# eventb-wsn-codegen
+# wsn-codegen
 
-Generate compilable **OMNeT++/INET 4.5** C++ from a **Rodin Event-B** wireless-sensor-network
-model. Point the tool at a folder of `.bum`/`.buc` files; it detects the protocol and emits a
-`NetworkProtocolBase` subclass plus the `.ned`, `omnetpp.ini` and helper header needed to drop the
-module into an INET simulation.
+Generate compilable **OMNeT++/INET 4.5** C++ from a pattern-based **Rodin Event-B** wireless-sensor-network
+model. Load the shared-decomposition pattern machines (`pM1` / `uM2` / `pM3`), pick a **target machine**
+and an **output name**, and the tool flattens the machine's refinement chain and emits exactly three
+files — `<Name>.h`, `<Name>.cc`, `<Name>.ned` — an `inet::RoutingProtocolBase` subclass ready to drop
+into an INET simulation.
 
 It is a **client-side web app** (TypeScript + React + Vite) — nothing is uploaded; parsing and code
-generation run entirely in your browser. A headless CLI is included for scripting.
+generation run entirely in your browser. A headless CLI + compile gate are included for scripting.
 
-**Live demo:** https://komenpetch.github.io/eventb-wsn-codegen/
+**Live demo:** https://komenpetch.github.io/wsn-codegen/
 
-> **Scaffold, not full routing logic.** The generator emits the model fields, state encodings,
-> detected patterns, the network-layer skeleton, the ENV/topology config, and the translated
-> guard/action fragments (as reference comments). The M4–M6 routing event bodies
-> (`handleUpperPacket` / `handleLowerPacket`) are **intentional stubs you complete by hand** — see
-> [What it does / doesn't do](#what-it-does--doesnt-do).
+> **Application layer.** Each Event-B event is translated to a guarded `bool` method. The imperative
+> network-layer message wiring (the `handleMessageWhenUp` body) is the documented next step you
+> complete by hand — see [What it does / doesn't do](#what-it-does--doesnt-do).
 
 ---
 
@@ -28,90 +27,84 @@ npm run dev
 ```
 
 Vite serves under the GitHub Pages base path, so open the URL it prints —
-**http://localhost:5173/eventb-wsn-codegen/** (not the bare `/`).
+**http://localhost:5173/wsn-codegen/** (not the bare `/`).
 
 To preview the production build instead:
 
 ```bash
 npm run build
-npm run preview     # http://localhost:4173/eventb-wsn-codegen/
+npm run preview     # http://localhost:4173/wsn-codegen/
 ```
 
 ---
 
 ## Using the web app
 
-1. Click **Pick Event-B folder → Generate**.
-2. Choose a folder containing Rodin `.bum`/`.buc` files. No model handy? Use the bundled
-   **`tests/fixtures/rtmcs`** or **`tests/fixtures/mintroute`**.
-3. Choose where to save the output:
+1. Click **Load Event-B folder** (or **load a .zip**, or drag a `.zip` onto the page). No model handy?
+   Use the bundled **`tests/fixtures/shdecom`** folder (`pM1.bum` / `uM2.bum` / `pM3.bum`).
+2. Pick a **target machine** from the dropdown (the detected machine labels) and an **output name**
+   (e.g. `Pm3App`). The target is flattened over its full `refines` chain, base first.
+3. Click **Generate → save** and choose where to write the three files:
    - **Chrome / Edge** — a native folder picker writes the files directly (File System Access API).
    - **Firefox / Safari / mobile** — the files download as **`generated-cpp.zip`**.
 
-The on-screen log reports each step (`Read N file(s)`, `Generated 5 files`, `Written…`/`Downloaded…`).
-Cancelling either picker logs `Cancelled.` (not an error). Selecting a folder with no Event-B files
-logs an actionable message instead of producing anything.
+The on-screen log reports each step. Cancelling a picker logs `Cancelled.` (not an error).
 
-## Using the CLI
+## Using the CLI + compile gate
 
 ```bash
-npm run generate -- <inputDir> <outputDir>
-# example:
-npm run generate -- tests/fixtures/rtmcs generated/rtmcs
+npm run generate            # writes Pm1App/Um2App/Pm3App.{h,cc,ned} + shared headers to out/
 ```
 
-Reads every `.bum`/`.buc` in `<inputDir>` and writes the five files to `<outputDir>`. Exits non-zero
-with a one-line message if the folder contains no Event-B model. Output is deterministic — the same
-model always produces byte-identical files.
+`scripts/generate.ts` generates the three `shdecom` pattern machines and stages `eb_helpers.h` /
+`eb_context.h` next to them. Then syntax-check each `.cc` against real INET 4.5 headers — the
+project's single measurable success criterion (Form 01 §6). The exact toolchain paths and command are
+in **[scripts/compile-gate.md](scripts/compile-gate.md)**; all three machines pass `-fsyntax-only`.
 
 ---
 
-## Output: five files per protocol
-
-`<Protocol>` is detected from the model (`RTMCS`, `MintRoute`, or `DSR`).
+## Output: three files per machine
 
 | File | Role |
 |---|---|
-| `<Protocol>.h` / `<Protocol>.cc` | INET 4.5 `NetworkProtocolBase` subclass (the network-layer slot) |
-| `<Protocol>.ned` | module definition + topology (ENVPattern) |
-| `omnetpp.ini` | simulation config (ENVPattern) |
-| `eb_helpers.h` | shared templated helper library (CommPattern canonical names) |
+| `<Name>.h` / `<Name>.cc` | INET 4.5 `RoutingProtocolBase` subclass; one guarded `bool` method per Event-B event |
+| `<Name>.ned` | `simple <Name> extends RoutingProtocolBase` module definition |
 
-The `.cc` carries a one-line **detected-patterns** header and a **translated guard/action fragments**
-reference block — the rule-engine's C++ for each Event-B fragment, as comments — to guide the M4–M6
-hand-completion.
+The generated class carries the four `OperationalBase` overrides (`handleMessageWhenUp`,
+`handleStartOperation`, `handleStopOperation`, `handleCrashOperation`) as empty stubs, a public
+constructor seeded from `INITIALISATION`, and ENC-typed state fields. It `#include`s the two shared
+headers `eb_helpers.h` (pair-set `inDom`/`inRan`) and `eb_context.h` (element aliases + context
+constants).
 
 ### What it does / doesn't do
 
-**Generated for you:** model fields (typed by encoding form), state encodings, detected patterns
-(CommPattern / RouteTable / ENVPattern), the concrete network-layer skeleton (all pure virtuals
-overridden so the module compiles), the `.ned` + `omnetpp.ini`, and the translated-fragment
-reference comments.
+**Generated for you:** the model's state fields (typed by encoding form ENC1–6), the class scaffold
+(base class, overrides, constructor), and one guarded `bool` method per event — early-return guards
+(the translated predicates) followed by the translated action statements.
 
-**Hand-completed (Phase 4):** the M4–M6 imperative routing logic inside `handleUpperPacket` /
-`handleLowerPacket`. These are deliberately empty stubs — the generator produces the scaffold and the
-exact translated fragments to paste in, not the protocol's routing decisions.
+**Hand-completed:** the imperative network-layer message handling (the `handleMessageWhenUp` body that
+receives packets and calls these event methods). The generator produces the app-layer scaffold and the
+per-event logic, not the packet-dispatch wiring.
 
 ### Dropping into OMNeT++/INET
 
-The generated module is an `ipv4`-slot `NetworkProtocolBase` subclass. For the verified
-compile-and-run recipe against a real INET 4.5 project (toolchain paths, the `NetworkLayer.ned`
-wrapper, `opp_makemake` flags, and the headless-run gotchas), see
-**[docs/OMNETPP_INTEGRATION.md](docs/OMNETPP_INTEGRATION.md)**.
+For a compile-and-run recipe against a real INET 4.5 project (toolchain paths, `opp_makemake` flags,
+and headless-run notes) see **[docs/OMNETPP_INTEGRATION.md](docs/OMNETPP_INTEGRATION.md)**.
 
 ---
 
 ## Project layout
 
 ```
-src/engine/     six-stage pipeline: parser → model → patternMatcher →
-                encodingResolver → ruleEngine → codeEmitter (pipeline.ts wires them)
+src/engine/     six-stage pipeline: parser → flattener → encodingResolver →
+                rules → ruleEngine → codeEmitter (pipeline.ts wires them)
+src/assets/     eb_helpers.h + eb_context.h (shared C++ headers, copied into output)
 src/io/         folder read + folder/zip write (File System Access + fallbacks)
-src/App.tsx     thin UI shell
-scripts/        headless generate CLI (+ analyze helper)
-tests/          vitest suite + fixtures (rtmcs, mintroute)
+src/App.tsx     thin UI shell (target-machine + output-name)
+scripts/        headless generate CLI + compile-gate.md
+tests/          vitest suite + fixtures/shdecom + generation snapshots
 docs/           OMNeT++/INET integration guide
-generated/      local-only generator output (gitignored)
+out/            local-only generator output (gitignored)
 ```
 
 ## Scripts
@@ -121,9 +114,9 @@ generated/      local-only generator output (gitignored)
 | `npm run dev` | Vite dev server (HMR) |
 | `npm run build` | type-check (`tsc -b`) + production build to `dist/` |
 | `npm run preview` | serve the production build locally |
-| `npm test` | run the vitest suite |
+| `npm test` | run the vitest suite (engine unit tests + generation snapshots) |
 | `npm run lint` | ESLint |
-| `npm run generate -- <in> <out>` | headless code generation |
+| `npm run generate` | generate the three `shdecom` machines + headers into `out/` |
 
 Pushing to `main` deploys the built app to GitHub Pages via `.github/workflows/deploy.yml`
 (it runs the tests and build first).
@@ -134,8 +127,7 @@ Pushing to `main` deploys the built app to GitHub Pages via `.github/workflows/d
 
 This tool is the Phase 3 deliverable of an undergraduate digital-engineering project, *Automatic Code
 Generation Framework from Event-B Models for Wireless Sensor Networks*, extending the pattern-based
-WSN formal-modelling work of Intana et al. (ECTI-CON 2020). The patterns it emits (CommPattern,
-RouteTable, ENVPattern) were extracted from three case studies — DSR, AODV/RTMCS, and MintRoute.
+WSN formal-modelling work of Intana et al. (ECTI-CON 2020).
 
 ## License
 
