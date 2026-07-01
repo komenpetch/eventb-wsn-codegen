@@ -1,839 +1,604 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`CodeEmitter — full-file snapshots > eb_helpers.h (shared) 1`] = `
-"#pragma once
-// eb_helpers.h — templated helper library for Event-B → C++ generated code.
-// Helper set transcribed from design/translation_rules_examples.md v3.1
-// §"Helper Functions Required". The CommPattern canonical names
-// (domRestrictedRange, tupleApply, relationalImage, routeNodeAt, routeLength)
-// are the emission names; the eb_* names are documentation aliases.
-#include <map>
-#include <set>
-#include <utility>
-
-// ─── Constant-function accessors ───────────────────────────────────────────
-// The Event-B constant function \`type ∈ PKT → TYPE\` has no machine-variable
-// storage, so rule R1 (type(x) ∈ S) needs a free accessor. Packet type is held
-// in this registry; project Phase 4 populates it when packets are constructed.
-inline std::map<int, int>& ebPacketTypes() { static std::map<int, int> t; return t; }
-inline int getType(int pkt) {                                            // R1
-  auto it = ebPacketTypes().find(pkt);
-  return it != ebPacketTypes().end() ? it->second : -1;
-}
-
-// ─── Function-form helpers (std::map<K, V>) ────────────────────────────────
-template <typename K, typename V>
-bool eb_in_range(const std::map<K, V>& R, const V& x) {                  // A3
-  for (const auto& kv : R) if (kv.second == x) return true;
-  return false;
-}
-
-template <typename K, typename V>
-std::map<K, V> eb_dom_restrict(const std::set<K>& D,
-                               const std::map<K, V>& R) {                // R5
-  std::map<K, V> out;
-  for (const auto& kv : R) if (D.count(kv.first)) out.insert(kv);
-  return out;
-}
-
-template <typename K, typename V>
-std::map<K, V> eb_dom_restrict_single(const K& k,
-                                      const std::map<K, V>& R) {         // R5
-  std::map<K, V> out;
-  auto it = R.find(k);
-  if (it != R.end()) out.insert(*it);
-  return out;
-}
-
-template <typename K, typename V>
-std::set<V> eb_rel_image(const std::map<K, V>& R,
-                         const std::set<K>& S) {                        // R7
-  std::set<V> out;
-  for (const auto& k : S) { auto it = R.find(k); if (it != R.end()) out.insert(it->second); }
-  return out;
-}
-
-template <typename K, typename V>
-std::set<V> eb_rel_image_single(const std::map<K, V>& R, const K& x) {   // R7
-  std::set<V> out;
-  auto it = R.find(x);
-  if (it != R.end()) out.insert(it->second);
-  return out;
-}
-
-template <typename K, typename V>
-std::map<K, V> eb_range_anti_restrict(const std::map<K, V>& R,
-                                      const std::set<V>& excluded) {     // R8
-  std::map<K, V> out;
-  for (const auto& kv : R) if (!excluded.count(kv.second)) out.insert(kv);
-  return out;
-}
-
-template <typename K, typename V>
-bool eb_in_range_union(const std::map<K, V>& R,
-                       const std::map<K, V>& S, const V& x) {            // R10
-  for (const auto& kv : R) if (kv.second == x) return true;
-  for (const auto& kv : S) if (kv.second == x) return true;
-  return false;
-}
-
-template <typename K, typename V>
-bool eb_in_range_union3(const std::map<K, V>& R, const std::map<K, V>& S,
-                        const std::map<K, V>& T, const V& x) {           // R10
-  return eb_in_range_union(R, S, x) || eb_in_range(T, x);
-}
-
-// ─── Map-of-sets helpers (std::map<A, std::set<B>>) ────────────────────────
-template <typename A, typename B>
-bool eb_in_range_rel(const std::map<A, std::set<B>>& R, const B& x) {    // A3
-  for (const auto& kv : R) if (kv.second.count(x)) return true;
-  return false;
-}
-
-template <typename A, typename B>
-std::set<B> eb_ran_dom_restrict_rel_single(const A& k,
-                                           const std::map<A, std::set<B>>& R) {  // R7
-  auto it = R.find(k);
-  return it != R.end() ? it->second : std::set<B>{};
-}
-
-template <typename A, typename B>
-std::set<B> relationalImage(const std::map<A, std::set<B>>& R, const A& k) {     // R7 (canonical)
-  auto it = R.find(k);
-  return it != R.end() ? it->second : std::set<B>{};
-}
-
-// ─── Pair-set helpers (std::set<std::pair<A, B>>) ──────────────────────────
-template <typename A, typename B>
-bool eb_in_dom_pairset(const std::set<std::pair<A, B>>& R, const A& x) {         // R2
-  for (const auto& p : R) if (p.first == x) return true;
-  return false;
-}
-
-template <typename A, typename B>
-bool eb_in_range_pairset(const std::set<std::pair<A, B>>& R, const B& x) {       // A3
-  for (const auto& p : R) if (p.second == x) return true;
-  return false;
-}
-
-template <typename A, typename B>
-bool eb_in_dom_union_pairset(const std::set<std::pair<A, B>>& R,
-                             const std::set<std::pair<A, B>>& S, const A& x) {    // R12
-  for (const auto& p : R) if (p.first == x) return true;
-  for (const auto& p : S) if (p.first == x) return true;
-  return false;
-}
-
-template <typename A, typename B>
-bool eb_in_range_union_pairset(const std::set<std::pair<A, B>>& R,
-                               const std::set<std::pair<A, B>>& S, const B& x) {  // R10
-  for (const auto& p : R) if (p.second == x) return true;
-  for (const auto& p : S) if (p.second == x) return true;
-  return false;
-}
-
-// Range-over-union membership (R10), pair-set form (matches RULES R10 emission)
-template <typename A, typename B>
-bool eb_in_range_union(const std::set<std::pair<A, B>>& R,
-                       const std::set<std::pair<A, B>>& S, const B& x) {          // R10
-  for (const auto& p : R) if (p.second == x) return true;
-  for (const auto& p : S) if (p.second == x) return true;
-  return false;
-}
-
-template <typename A, typename B>
-void eb_range_anti_restrict_pairset(std::set<std::pair<A, B>>& R,
-                                    const std::set<B>& excluded) {                // R8
-  for (auto it = R.begin(); it != R.end();) {
-    if (excluded.count(it->second)) it = R.erase(it);
-    else ++it;
-  }
-}
-
-// ─── PairRouteTable helpers (CommPattern canonical names) ──────────────────
-// Pair-keyed domain-restricted range (R17 / Form A)
-template <typename X, typename S, typename V>
-std::set<S> domRestrictedRange(const std::map<std::pair<X, S>, V>& R, const X& x) {
-  std::set<S> out;
-  for (const auto& kv : R) if (kv.first.first == x) out.insert(kv.first.second);
-  return out;
-}
-
-// Pair-keyed function application (R18 / Form B)
-template <typename X, typename S, typename V>
-V tupleApply(const std::map<std::pair<X, S>, V>& R, const X& x, const S& s) {
-  return R.at({x, s});
-}
-
-// ─── SourceRouteCache helpers (DSR-only, flat encoding dsrPath ∈ (PKT×ℕ)→ND) ─
-inline int routeNodeAt(const std::map<std::pair<int, int>, int>& dsrPath, int pkt, int idx) {  // R19
-  return dsrPath.at({pkt, idx});
-}
-
-inline int routeLength(const std::map<std::pair<int, int>, int>& dsrPath, int pkt) {           // R20
-  int n = 0;
-  for (const auto& kv : dsrPath) if (kv.first.first == pkt) ++n;
-  return n;
-}
-"
-`;
-
-exports[`CodeEmitter — full-file snapshots > mintroute/MintRoute.cc 1`] = `
-"#include "MintRoute.h"
-#include "inet/common/Protocol.h"
-
-// Detected patterns - CommPattern(packets: ndBuff, WiMedium, flood: floodTbl); RouteTable: single (neighbourTbl); ENVPattern(link: wsnLinks, neighbours: ctlNeighbours, envNeighbours).
-
-Define_Module(MintRoute);
-
-static const Protocol mintrouteProtocol("mintroute", "MintRoute", Protocol::NetworkLayer);
-
-const Protocol& MintRoute::getProtocol() const { return mintrouteProtocol; }
-
-void MintRoute::initialize(int stage) { NetworkProtocolBase::initialize(stage); }
-void MintRoute::handleUpperPacket(Packet *packet) { /* M4-M6 event bodies: project Phase 4 */ }
-void MintRoute::handleLowerPacket(Packet *packet) { /* M4-M6 event bodies: project Phase 4 */ }
-
-// --- Translated guard/action fragments (rule catalog R*/A*) ---------------
-// Reference C++ for the M4-M6 imperative bodies (project Phase 4 hand-completion).
-//   [A9] xmittedPkts ≔ ∅  =>  xmittedPkts.clear();
-//   [A9] middleware ≔ ∅  =>  middleware.clear();
-//   [A9] sinkBuff ≔  ∅  =>  sinkBuff.clear();
-//   [A9] lostPkts ≔ ∅  =>  lostPkts.clear();
-//   [A6] pkt ∉ xmittedPkts  =>  xmittedPkts.count(pkt) == 0
-//   [A6] pkt ∉ middleware  =>  middleware.count(pkt) == 0
-//   [A7] s = initialSrcAddr(pkt)  =>  int s = initialSrcAddr.at(pkt);
-//   [R3] xmittedPkts ≔ xmittedPkts ∪ {pkt}  =>  xmittedPkts.insert(pkt);
-//   [R3] middleware ≔  middleware ∪  {pkt}  =>  middleware.insert(pkt);
-//   [R3] sinkBuff ≔ sinkBuff ∪ {pkt}  =>  sinkBuff.insert(pkt);
-//   [A6] pkt ∈ middleware  =>  middleware.count(pkt) > 0
-//   [R4] middleware ≔  middleware ∖  {pkt}  =>  middleware.erase(pkt);
-//   [R3] lostPkts ≔ lostPkts ∪ {pkt}  =>  lostPkts.insert(pkt);
-//   [A9] ndBuff ≔ ∅  =>  ndBuff.clear();
-//   [A9] WiMedium ≔ ∅  =>  WiMedium.clear();
-//   [A9] sensingNDs ≔ ∅  =>  sensingNDs.clear();
-//   [A9] sensedPkts ≔ ∅  =>  sensedPkts.clear();
-//   [A9] floodedPkts ≔ ∅  =>  floodedPkts.clear();
-//   [A10] floodTbl ≔ ND × {∅}  =>  floodTbl.clear();
-//   [A9] ctlNeighbours ≔ ∅  =>  ctlNeighbours.clear();
-//   [A9] recLostPkts ≔ ∅  =>  recLostPkts.clear();
-//   [A6] s ∉ sensingNDs  =>  sensingNDs.count(s) == 0
-//   [A8] s ∈ dom(floodTbl)  =>  floodTbl.count(s) > 0
-//   [R15] pkt ∉ floodTbl(s)  =>  (floodTbl.count(s) == 0 || floodTbl.at(s).count(pkt) == 0)
-//   [A6] pkt ∉ sinkBuff  =>  sinkBuff.count(pkt) == 0
-//   [R15] pkt ∉ ran(recLostPkts)  =>  (ran.count(recLostPkts) == 0 || ran.at(recLostPkts).count(pkt) == 0)
-//   [R3] sensingNDs ≔ sensingNDs ∪ {s}  =>  sensingNDs.insert(s);
-//   [R3] sensedPkts ≔ sensedPkts ∪ {pkt}  =>  sensedPkts.insert(pkt);
-//   [R16] floodTbl(s) ≔  floodTbl(s) ∪ {pkt}  =>  floodTbl[s].insert(pkt);
-//   [A8] x ∈ dom(floodFlg)  =>  floodFlg.count(x) > 0
-//   [R1] type(pkt) ∈ CONTROL  =>  CONTROL.count(getType(pkt)) > 0
-//   [R3] floodedPkts ≔ floodedPkts ∪ {pkt}  =>  floodedPkts.insert(pkt);
-//   [A3] pkt ∈ ran(WiMedium) ∖ ran(recLostPkts)  =>  eb_in_range(WiMedium, pkt)
-//   [A2] nbrs ≠ ∅  =>  !nbrs.empty()
-//   [R15] pkt ∉ dom(ctlNeighbours)  =>  (dom.count(ctlNeighbours) == 0 || dom.at(ctlNeighbours).count(pkt) == 0)
-//   [A8] nb ∈ dom(floodTbl)  =>  floodTbl.count(nb) > 0
-//   [R15] pkt ∉ floodTbl(nb)  =>  (floodTbl.count(nb) == 0 || floodTbl.at(nb).count(pkt) == 0)
-//   [R16] floodTbl(nb) ≔  floodTbl(nb) ∪ {pkt}  =>  floodTbl[nb].insert(pkt);
-//   [A8] pkt ∈ dom(ctlNeighbours)  =>  ctlNeighbours.count(pkt) > 0
-//   [R11] {pkt} ◁ctlNeighbours = ∅  =>  (ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty())
-//   [A3] pkt ∈ ran(ndBuff)  =>  eb_in_range(ndBuff, pkt)
-//   [A8] f ∈ dom(WiMedium)  =>  eb_in_dom_pairset(WiMedium, f)
-//   [R15] pkt ∉ ran(ndBuff)  =>  (ran.count(ndBuff) == 0 || ran.at(ndBuff).count(pkt) == 0)
-//   [A6] pkt ∉ sensedPkts  =>  sensedPkts.count(pkt) == 0
-//   [A9] sentUp≔ ∅  =>  sentUp.clear();
-//   [A9] sentDown≔ ∅  =>  sentDown.clear();
-//   [A9] channel ≔ ∅  =>  channel.clear();
-//   [A9] envNeighbours ≔ ∅  =>  envNeighbours.clear();
-//   [A9] wsnLinks ≔ ∅  =>  wsnLinks.clear();
-//   [A9] crashedLinks ≔ ∅  =>  crashedLinks.clear();
-//   [A9] nbHops ≔ ∅  =>  nbHops.clear();
-//   [A9] pktSeqNo ≔ ∅  =>  pktSeqNo.clear();
-//   [A9] pktSrc ≔ ∅  =>  pktSrc.clear();
-//   [A9] pktFwdr ≔ ∅  =>  pktFwdr.clear();
-//   [A9] pktData ≔ ∅  =>  pktData.clear();
-//   [A9] pktNbHops ≔ ∅  =>  pktNbHops.clear();
-//   [A9] vPktSeqNo ≔ ∅  =>  vPktSeqNo.clear();
-//   [A9] vPktSrc ≔ ∅  =>  vPktSrc.clear();
-//   [A9] vPktFwdr ≔ ∅  =>  vPktFwdr.clear();
-//   [A9] vPktData ≔ ∅  =>  vPktData.clear();
-//   [A9] vPktNbHops ≔ ∅  =>  vPktNbHops.clear();
-//   [A7] sf = envSensedFlg(x)  =>  int sf = envSensedFlg.at(x);
-//   [A7] sd = envData(x)  =>  int sd = envData.at(x);
-//   [R16] senseBuff(x) ≔  senseBuff(x) ∪ {sd}  =>  senseBuff[x].insert(sd);
-//   [A8] x ∈ dom(envSensedFlg)  =>  envSensedFlg.count(x) > 0
-//   [A2] ndBuff = ∅  =>  ndBuff.empty()
-//   [A2] senseBuff ≠ ∅  =>  !senseBuff.empty()
-//   [A8] s ∈ dom(dataSeqNo)  =>  dataSeqNo.count(s) > 0
-//   [R15] pkt  ∉ dom(pktSeqNo)  =>  (dom.count(pktSeqNo) == 0 || dom.at(pktSeqNo).count(pkt) == 0)
-//   [R15] pkt ∉ dom(pktSrc)  =>  (dom.count(pktSrc) == 0 || dom.at(pktSrc).count(pkt) == 0)
-//   [R15] pkt ∉ dom(pktFwdr)  =>  (dom.count(pktFwdr) == 0 || dom.at(pktFwdr).count(pkt) == 0)
-//   [R15] pkt ∉ dom(pktData)  =>  (dom.count(pktData) == 0 || dom.at(pktData).count(pkt) == 0)
-//   [R15] pkt ∉ dom(pktNbHops)  =>  (dom.count(pktNbHops) == 0 || dom.at(pktNbHops).count(pkt) == 0)
-//   [R13] nbHops ≔  nbHops ∪ {s ↦ {pkt ↦ nbh}}  =>  nbHops[s][pkt] = nbh;
-//   [A8] s ∈ dom(floodSeqNo)  =>  floodSeqNo.count(s) > 0
-//   [A8] pkt ∈ dom(pktFwdr)  =>  pktFwdr.count(pkt) > 0
-//   [A8] pkt ∈ dom(pktNbHops)  =>  pktNbHops.count(pkt) > 0
-//   [A8] pkt ∈ dom(pktSeqNo)  =>  pktSeqNo.count(pkt) > 0
-//   [A7] sno = pktSeqNo(pkt)  =>  int sno = pktSeqNo.at(pkt);
-//   [A8] pkt ∈ dom(pktSrc)  =>  pktSrc.count(pkt) > 0
-//   [A7] src= pktSrc(pkt)  =>  int src = pktSrc.at(pkt);
-//   [A7] fwdr = pktFwdr(pkt)  =>  int fwdr = pktFwdr.at(pkt);
-//   [A8] pkt ∈ dom(pktData)  =>  pktData.count(pkt) > 0
-//   [A7] data = pktData(pkt)  =>  int data = pktData.at(pkt);
-//   [A7] nbh = pktNbHops(pkt)  =>  int nbh = pktNbHops.at(pkt);
-//   [R15] pkt ∉ dom(vPktSeqNo)  =>  (dom.count(vPktSeqNo) == 0 || dom.at(vPktSeqNo).count(pkt) == 0)
-//   [R15] pkt ∉ dom(vPktFwdr)  =>  (dom.count(vPktFwdr) == 0 || dom.at(vPktFwdr).count(pkt) == 0)
-//   [R15] pkt ∉ dom(vPktSrc)  =>  (dom.count(vPktSrc) == 0 || dom.at(vPktSrc).count(pkt) == 0)
-//   [R15] pkt ∉ dom(vPktData)  =>  (dom.count(vPktData) == 0 || dom.at(vPktData).count(pkt) == 0)
-//   [R15] pkt ∉ dom(vPktNbHops)  =>  (dom.count(vPktNbHops) == 0 || dom.at(vPktNbHops).count(pkt) == 0)
-//   [R14] pktSeqNo ≔  {pkt} ⩤ pktSeqNo  =>  pktSeqNo.erase(pkt);
-//   [R14] pktSrc ≔  {pkt} ⩤ pktSrc  =>  pktSrc.erase(pkt);
-//   [R14] pktFwdr ≔ {pkt}  ⩤ pktFwdr  =>  pktFwdr.erase(pkt);
-//   [R14] pktData ≔  {pkt} ⩤ pktData  =>  pktData.erase(pkt);
-//   [R14] pktNbHops ≔  {pkt} ⩤ pktNbHops  =>  pktNbHops.erase(pkt);
-//   [A2] channel ≠ ∅  =>  !channel.empty()
-//   [A3] pkt ∈ ran(channel)  =>  eb_in_range(channel, pkt)
-//   [R7] nbs = wsnLinks[{f}]  =>  const std::set<int>& nbs = wsnLinks.at(f);
-//   [A2] nbs ≠ ∅  =>  !nbs.empty()
-//   [A2] envNeighbours = ∅  =>  envNeighbours.empty()
-//   [A6] nb ∈ nbs  =>  nbs.count(nb) > 0
-//   [A3] pkt ∈ ran(sentDown)  =>  eb_in_range(sentDown, pkt)
-//   [R6] nbrs = ran({pkt} ◁ envNeighbours)  =>  const std::set<int>& nbrs = envNeighbours.at(pkt);
-//   [A8] pkt ∈ dom(vPktSeqNo)  =>  vPktSeqNo.count(pkt) > 0
-//   [A7] sno = vPktSeqNo(pkt)  =>  int sno = vPktSeqNo.at(pkt);
-//   [A8] pkt ∈ dom(vPktSrc)  =>  vPktSrc.count(pkt) > 0
-//   [A7] src = vPktSrc(pkt)  =>  int src = vPktSrc.at(pkt);
-//   [A8] pkt ∈ dom(vPktFwdr)  =>  vPktFwdr.count(pkt) > 0
-//   [A7] fwdr = vPktFwdr(pkt)  =>  int fwdr = vPktFwdr.at(pkt);
-//   [A8] pkt ∈ dom(vPktData)  =>  vPktData.count(pkt) > 0
-//   [A7] data= vPktData(pkt)  =>  int data = vPktData.at(pkt);
-//   [A8] pkt ∈ dom(vPktNbHops)  =>  vPktNbHops.count(pkt) > 0
-//   [A7] nbh = vPktNbHops(pkt)  =>  int nbh = vPktNbHops.at(pkt);
-//   [R14] vPktSeqNo ≔  {pkt} ⩤ vPktSeqNo  =>  vPktSeqNo.erase(pkt);
-//   [R14] vPktSrc ≔  {pkt} ⩤ vPktSrc  =>  vPktSrc.erase(pkt);
-//   [R14] vPktFwdr ≔  {pkt} ⩤ vPktFwdr  =>  vPktFwdr.erase(pkt);
-//   [R14] vPktData ≔  {pkt} ⩤ vPktData  =>  vPktData.erase(pkt);
-//   [R14] vPktNbHops ≔  {pkt} ⩤ vPktNbHops  =>  vPktNbHops.erase(pkt);
-//   [R15] pkt ∉ ran(sentDown)  =>  (ran.count(sentDown) == 0 || ran.at(sentDown).count(pkt) == 0)
-//   [A3] pkt ∈  ran(sentUp)  =>  eb_in_range(sentUp, pkt)
-//   [R13] nbHops ≔  nbHops ∪  {nb ↦ {pkt ↦ nbh}}  =>  nbHops[nb][pkt] = nbh;
-//   [A8] f ∈ dom(sentUp)  =>  eb_in_dom_pairset(sentUp, f)
-//   [A2] nbs = ∅  =>  nbs.empty()
-//   [A9] updateNbrs ≔ ∅  =>  updateNbrs.clear();
-//   [A9] neighbourTbl ≔ ∅  =>  neighbourTbl.clear();
-//   [A9] missed ≔ ∅  =>  missed.clear();
-//   [A9] received ≔ ∅  =>  received.clear();
-//   [A9] lastSeqno ≔ ∅  =>  lastSeqno.clear();
-//   [A9] receiveEst ≔ ∅  =>  receiveEst.clear();
-//   [A9] estNDs ≔ ∅  =>  estNDs.clear();
-//   [A9] estNbrs ≔ ∅  =>  estNbrs.clear();
-//   [A8] x ∈ dom(totalSentBcon)  =>  totalSentBcon.count(x) > 0
-//   [A8] x ∈ dom(linkSeqNo)  =>  linkSeqNo.count(x) > 0
-//   [A7] f = pktFwdr(pkt)  =>  int f = pktFwdr.at(pkt);
-//   [A2] updateNbrs ≠ ∅  =>  !updateNbrs.empty()
-//   [A7] sNo = netSeqNo(pkt)  =>  int sNo = netSeqNo.at(pkt);
-//   [R3] estNDs ≔ estNDs ∪ {x}  =>  estNDs.insert(x);
-//   [A6] nd ∈ estNDs  =>  estNDs.count(nd) > 0
-//   [A8] nd ∈ dom(totalSentBcon)  =>  totalSentBcon.count(nd) > 0
-//   [R2] nd ↦ nb ∈ dom(lastSeqno)  =>  lastSeqno.find({nd, nb}) != lastSeqno.end()
-//   [R18] r = received(nd ↦ nb)  =>  int r = tupleApply(received, nd, nb);
-//   [R18] m = missed(nd↦nb)  =>  int m = tupleApply(missed, nd, nb);
-//   [R2] nd ↦ nb∈dom(receiveEst)  =>  receiveEst.find({nd, nb}) != receiveEst.end()
-//   [R2] nd ↦ nb∈dom(missed)  =>  missed.find({nd, nb}) != missed.end()
-//   [R2] nd ↦ nb∈dom(received)  =>  received.find({nd, nb}) != received.end()
-//   [A2] totalSentBcon ≠ ∅  =>  !totalSentBcon.empty()
-//   [A9] sentEst ≔ ∅  =>  sentEst.clear();
-//   [A9] bcastRouNodes ≔  ∅  =>  bcastRouNodes.clear();
-//   [A9] liveliness ≔ ∅  =>  liveliness.clear();
-//   [A9] checkedLiveNbrs ≔ ∅  =>  checkedLiveNbrs.clear();
-//   [A2] checkedLiveNbrs = ∅  =>  checkedLiveNbrs.empty()
-//   [A6] s ∉ bcastRouNodes  =>  bcastRouNodes.count(s) == 0
-//   [R3] bcastRouNodes ≔ bcastRouNodes ∪ {s}  =>  bcastRouNodes.insert(s);
-//   [A8] x ∈ dom(routeSeqNo)  =>  routeSeqNo.count(x) > 0
-//   [R2] y ↦ x ∈ dom(sentEst)  =>  sentEst.find({y, x}) != sentEst.end()
-//   [R2] x ↦ y ∈ dom(receiveEst)  =>  receiveEst.find({x, y}) != receiveEst.end()
-//   [R2] y ↦ x   ∈ dom(liveliness)  =>  liveliness.find({y, x}) != liveliness.end()
-//   [R2] x ↦ y  ∈  dom(liveliness)  =>  liveliness.find({x, y}) != liveliness.end()
-//   [R18] live = liveliness(x↦y)  =>  int live = tupleApply(liveliness, x, y);
-//   [A9] cRouteTree ≔ ∅  =>  cRouteTree.clear();
-//   [A9] Nbrs≔ ∅  =>  Nbrs.clear();
-//   [A9] calPCostNDs ≔ ∅  =>  calPCostNDs.clear();
-//   [A9] calPCost ≔ ∅  =>  calPCost.clear();
-//   [A9] pktDestAddr ≔ ∅  =>  pktDestAddr.clear();
-//   [A9] vPktDestAddr ≔ ∅  =>  vPktDestAddr.clear();
-//   [A9] deadNbrs ≔ ∅  =>  deadNbrs.clear();
-//   [A9] parent ≔ ∅  =>  parent.clear();
-//   [A9] cost ≔ ∅  =>  cost.clear();
-//   [A9] chosenNDs ≔ ∅  =>  chosenNDs.clear();
-//   [R15] pkt ∉ dom(pktDestAddr)  =>  (dom.count(pktDestAddr) == 0 || dom.at(pktDestAddr).count(pkt) == 0)
-//   [A7] y =  cRouteTree(x)  =>  int y = cRouteTree.at(x);
-//   [A8] pkt ∈ dom(pktDestAddr)  =>  pktDestAddr.count(pkt) > 0
-//   [A7] dest=pktDestAddr(pkt)  =>  int dest = pktDestAddr.at(pkt);
-//   [R15] pkt ∉ dom(vPktDestAddr)  =>  (dom.count(vPktDestAddr) == 0 || dom.at(vPktDestAddr).count(pkt) == 0)
-//   [R14] pktDestAddr ≔  {pkt} ⩤ pktDestAddr  =>  pktDestAddr.erase(pkt);
-//   [A8] pkt ∈ dom(vPktDestAddr)  =>  vPktDestAddr.count(pkt) > 0
-//   [A7] dest = vPktDestAddr(pkt)  =>  int dest = vPktDestAddr.at(pkt);
-//   [A8] x ∈ dom(cRouteTree)  =>  cRouteTree.count(x) > 0
-//   [A7] par = cRouteTree(x)  =>  int par = cRouteTree.at(x);
-//   [A8] x ∈ dom(cpCost)  =>  cpCost.count(x) > 0
-//   [A7] cst = cpCost(x)  =>  int cst = cpCost.at(x);
-//   [R2] y ↦ x ∈ dom(parent)  =>  parent.find({y, x}) != parent.end()
-//   [R2] y ↦ x ∈ dom(cost)  =>  cost.find({y, x}) != cost.end()
-//   [R15] x ∉ dom(cRouteTree)  =>  (dom.count(cRouteTree) == 0 || dom.at(cRouteTree).count(x) == 0)
-//   [A6] x ∉ chosenNDs  =>  chosenNDs.count(x) == 0
-//   [R6] nb = ran({x} ◁  neighbourTbl)  =>  const std::set<int>& nb = neighbourTbl.at(x);
-//   [A2] nb  ≠ ∅  =>  !nb.empty()
-//   [A2] Nbrs = ∅  =>  Nbrs.empty()
-//   [R3] chosenNDs ≔ chosenNDs ∪ {x}  =>  chosenNDs.insert(x);
-//   [A6] nb ∈ Nbrs  =>  Nbrs.count(nb) > 0
-//   [R2] x ↦nb  ∈ dom(receiveEst)  =>  receiveEst.find({x, nb}) != receiveEst.end()
-//   [R18] rEst = receiveEst(x ↦ nb)  =>  int rEst = tupleApply(receiveEst, x, nb);
-//   [R2] x ↦nb ∈ dom(sentEst)  =>  sentEst.find({x, nb}) != sentEst.end()
-//   [R18] sEst = sentEst(x ↦ nb)  =>  int sEst = tupleApply(sentEst, x, nb);
-//   [R6] Nbrs1 = ran({x} ◁ neighbourTbl)  =>  const std::set<int>& Nbrs1 = neighbourTbl.at(x);
-//   [A2] Nbrs1 ≠ ∅  =>  !Nbrs1.empty()
-//   [R4] Nbrs ≔ Nbrs  ∖ {nb}  =>  Nbrs.erase(nb);
-//   [R18] pREst = receiveEst(x ↦ nb)  =>  int pREst = tupleApply(receiveEst, x, nb);
-//   [R18] pSEst = sentEst(x ↦ nb)  =>  int pSEst = tupleApply(sentEst, x, nb);
-//   [A6] x ∉ nodes  =>  nodes.count(x) == 0
-//   [A6] p ∈ nodes  =>  nodes.count(p) > 0
-//   [R3] nodes ≔ nodes  ∪  {x}  =>  nodes.insert(x);
-//   [A2] calPCostNDs = ∅  =>  calPCostNDs.empty()
-//   [A6] x ∉ deadNbrs  =>  deadNbrs.count(x) == 0
-//   [A2] chosenNDs ≠ ∅  =>  !chosenNDs.empty()
-"
-`;
-
-exports[`CodeEmitter — full-file snapshots > mintroute/MintRoute.h 1`] = `
-"#pragma once
+exports[`snapshot: shDecom6_2 → INET C++ > pM1 1`] = `
+[
+  {
+    "content": "#pragma once
 #include <map>
 #include <set>
 #include <utility>
 #include "eb_helpers.h"
-#include "inet/networklayer/base/NetworkProtocolBase.h"
-#include "inet/networklayer/contract/INetworkProtocol.h"
+#include "eb_context.h"
+#include "inet/routing/base/RoutingProtocolBase.h"
 
 using namespace inet;
 
-class MintRoute : public NetworkProtocolBase, public INetworkProtocol {
- protected:
-  std::map<int, int> xmittedPkts;
-  std::map<int, int> middleware;
-  std::map<int, int> sinkBuff;
-  std::map<int, int> lostPkts;
-  std::set<std::pair<int,int>> ndBuff;
-  std::set<std::pair<int,int>> WiMedium;
-  std::map<int, int> sensingNDs;
-  std::map<int, int> sensedPkts;
-  std::map<int, int> floodedPkts;
-  std::map<int, std::set<int>> floodTbl;
-  std::map<int, std::set<int>> ctlNeighbours;
-  std::map<int, int> floodFlg;
-  std::set<std::pair<int,int>> recLostPkts;
-  std::map<int, int> senseBuff;
-  std::set<std::pair<int,int>> sentUp;
-  std::set<std::pair<int,int>> sentDown;
-  std::map<int, int> ctlSensedFlg;
-  std::map<int, int> dataSeqNo;
-  std::map<int, int> floodSeqNo;
-  std::map<int, int> nbHops;
-  std::map<int, int> pktSeqNo;
-  std::map<int, int> pktSrc;
-  std::map<int, int> pktFwdr;
-  std::map<int, int> pktData;
-  std::map<int, int> pktNbHops;
-  std::map<int, std::set<int>> wsnLinks;
-  std::set<std::pair<int,int>> channel;
-  std::map<int, std::set<int>> envNeighbours;
-  std::map<int, int> envSensedFlg;
-  std::map<int, int> envData;
-  std::map<int, int> vPktNbHops;
-  std::map<int, int> vPktSrc;
-  std::map<int, int> vPktSeqNo;
-  std::map<int, int> vPktFwdr;
-  std::map<int, int> vPktData;
-  std::map<int, int> crashedLinks;
-  std::map<int, int> totalSentBcon;
-  std::map<int, int> netSeqNo;
-  std::set<std::pair<int,int>> updateNbrs;
-  std::map<int, std::set<int>> neighbourTbl;
-  std::map<std::pair<int,int>, int> missed;
-  std::map<std::pair<int,int>, int> received;
-  std::map<std::pair<int,int>, int> lastSeqno;
-  std::map<std::pair<int,int>, int> receiveEst;
-  std::map<int, int> linkSeqNo;
-  std::map<int, int> estNDs;
-  std::map<int, int> estNbrs;
-  std::map<std::pair<int,int>, int> sentEst;
-  std::map<int, int> bcastRouTimer;
-  std::map<int, int> bcastRouNodes;
-  std::map<int, int> routeSeqNo;
-  std::map<std::pair<int,int>, int> liveliness;
-  std::map<int, int> checkedLiveNbrs;
-  std::map<int, int> chooseParentTimer;
-  std::map<int, int> nodes;
-  std::map<int, int> cRouteTree;
-  std::map<int, int> Nbrs;
-  std::map<int, int> completedRoute;
-  std::map<int, int> cpCost;
-  std::set<std::pair<int,int>> calPCostNDs;
-  std::map<std::pair<int,int>, int> calPCost;
-  std::map<int, int> vPktDestAddr;
-  std::map<int, int> calPCostFlg;
-  std::map<int, int> pktDestAddr;
-  std::map<std::pair<int,int>, int> parent;
-  std::map<std::pair<int,int>, int> cost;
-  std::map<int, int> deadNbrs;
-  std::map<int, int> chosenNDs;
+class Pm1App : public RoutingProtocolBase {
+  protected:
+    std::map<PktId, Node> pktFwdr;
+    std::map<PktId, Data> pktData;
+    std::set<PktId> createdPkts;
+    std::set<std::pair<Node, PktId>> ndBuff;
+    std::set<std::pair<Node, PktId>> sentUp;
+    std::set<std::pair<Node, PktId>> sentDown;
+    std::map<PktId, std::set<Node>> ctlNeighbours;
+    std::set<std::pair<Node, PktId>> destBuff;
+    std::set<std::pair<Node, PktId>> recvBuff;
+    std::set<std::pair<Node, PktId>> clrRecvBuffFlg;
 
-  // Protocol identity; defined in the .cc against a file-local Protocol.
-  const Protocol& getProtocol() const override;
+    // OperationalBase pure virtuals — empty stubs keep the module concrete
+    // (real message handling is the network-layer next step).
+    void handleMessageWhenUp(cMessage *msg) override { delete msg; }
+    void handleStartOperation(LifecycleOperation *op) override {}
+    void handleStopOperation(LifecycleOperation *op) override {}
+    void handleCrashOperation(LifecycleOperation *op) override {}
 
-  void handleUpperPacket(Packet *packet) override;
-  void handleLowerPacket(Packet *packet) override;
-  void initialize(int stage) override;
+    // Application-layer events (translated from the Event-B pattern machine).
+    bool creatingPkt(Node x, int des, PktId pkt, Data data);
+    bool start_tx(Node x, PktId pkt);
+    bool send_down(Node x, PktId pkt);
+    bool send_up(Node x, PktId pkt, int nbrs);
+    bool receive(Node nb, PktId pkt);
+    bool clear_recvdBuff(Node nb, PktId pkt);
+    bool fwdr_receive_pkt(Node nb, PktId pkt);
+    bool dest_recv_pkt(Node nb, PktId pkt);
+    bool finish_tx_pkt(Node x, PktId pkt);
+    bool final_tx_pkt(PktId pkt);
 
-  // Lifecycle hooks are pure virtual in OperationalMixin; empty bodies keep the
-  // module concrete. Start/stop/crash logic is a project Phase 4 fill-in.
-  void handleStartOperation(LifecycleOperation *operation) override {}
-  void handleStopOperation(LifecycleOperation *operation) override {}
-  void handleCrashOperation(LifecycleOperation *operation) override {}
+  public:
+    Pm1App();
 };
-"
-`;
+",
+    "path": "Pm1App.h",
+  },
+  {
+    "content": "#include "Pm1App.h"
 
-exports[`CodeEmitter — full-file snapshots > mintroute/MintRoute.ned 1`] = `
-"import inet.networklayer.base.NetworkProtocolBase;
-import inet.networklayer.contract.INetworkProtocol;
+Define_Module(Pm1App);
+
+Pm1App::Pm1App() {
+    pktFwdr.clear();
+    pktData.clear();
+    createdPkts.clear();
+    ndBuff.clear();
+    sentUp.clear();
+    sentDown.clear();
+    ctlNeighbours.clear();
+    destBuff.clear();
+    recvBuff.clear();
+    clrRecvBuffFlg.clear();
+}
+
+bool Pm1App::creatingPkt(Node x, int des, PktId pkt, Data data) {
+    if (!((ND.count(x) > 0 && Dests.count(x) == 0))) return false;
+    if (!(x == initialSrcAddr.at(pkt))) return false;
+    if (!(des == finalDestAddr.at(pkt))) return false;
+    if (!(pktFwdr.count(pkt) == 0)) return false;
+    if (!(pktData.count(pkt) == 0)) return false;
+    if (!(ndBuff.count({x, pkt}) == 0)) return false;
+    createdPkts.insert(pkt);
+    pktFwdr[pkt] = x;
+    pktData[pkt] = data;
+    ndBuff.insert({x, pkt});
+    return true;
+}
+
+bool Pm1App::start_tx(Node x, PktId pkt) {
+    if (!(sentDown.count({x, pkt}) == 0)) return false;
+    if (!(sentUp.count({x, pkt}) == 0)) return false;
+    if (!(pktFwdr.count(pkt) > 0)) return false;
+    if (!(ndBuff.count({x, pkt}) > 0)) return false;
+    sentDown.insert({x, pkt});
+    ndBuff.erase({x, pkt});
+    return true;
+}
+
+bool Pm1App::send_down(Node x, PktId pkt) {
+    return sentDown.count({x, pkt}) > 0;
+}
+
+bool Pm1App::send_up(Node x, PktId pkt, int nbrs) {
+    if (!(sentUp.count({x, pkt}) == 0)) return false;
+    if (!(sentDown.count({x, pkt}) > 0)) return false;
+    if (!(ctlNeighbours.count(pkt) == 0)) return false;
+    if (!(!nbrs.empty())) return false;
+    for (auto _v : nbrs) ctlNeighbours[pkt].insert(_v);
+    sentDown.erase({x, pkt});
+    sentUp.insert({x, pkt});
+    return true;
+}
+
+bool Pm1App::receive(Node nb, PktId pkt) {
+    if (!(recvBuff.count({nb, pkt}) == 0)) return false;
+    if (!(sentUp.count({nb, pkt}) == 0)) return false;
+    if (!(sentDown.count({nb, pkt}) == 0)) return false;
+    recvBuff.insert({nb, pkt});
+    ctlNeighbours[pkt].erase(nb); if (ctlNeighbours[pkt].empty()) ctlNeighbours.erase(pkt);
+    return true;
+}
+
+bool Pm1App::clear_recvdBuff(Node nb, PktId pkt) {
+    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) > 0)) return false;
+    recvBuff.erase({nb, pkt});
+    return true;
+}
+
+bool Pm1App::fwdr_receive_pkt(Node nb, PktId pkt) {
+    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0)) return false;
+    if (!(Dests.count(nb) == 0)) return false;
+    if (!(ndBuff.count({nb, pkt}) == 0)) return false;
+    clrRecvBuffFlg.insert({nb, pkt});
+    ndBuff.insert({nb, pkt});
+    return true;
+}
+
+bool Pm1App::dest_recv_pkt(Node nb, PktId pkt) {
+    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0)) return false;
+    if (!(destBuff.count({nb, pkt}) == 0)) return false;
+    destBuff.insert({nb, pkt});
+    clrRecvBuffFlg.insert({nb, pkt});
+    return true;
+}
+
+bool Pm1App::finish_tx_pkt(Node x, PktId pkt) {
+    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty()))) return false;
+    if (!(inRan(sentUp, pkt))) return false;
+    if (!(!inRan(sentDown, pkt))) return false;
+    if (!(inDom(sentUp, x))) return false;
+    if (!(sentUp.count({x, pkt}) > 0)) return false;
+    if (!(inRan(ndBuff, pkt))) return false;
+    sentUp.erase({x, pkt});
+    return true;
+}
+
+bool Pm1App::final_tx_pkt(PktId pkt) {
+    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty()))) return false;
+    if (!(inRan(sentUp, pkt))) return false;
+    if (!(!inRan(sentDown, pkt))) return false;
+    if (!(!inRan(ndBuff, pkt))) return false;
+    for (auto it = sentUp.begin(); it != sentUp.end(); ) it->second == pkt ? it = sentUp.erase(it) : ++it;
+    return true;
+}
+",
+    "path": "Pm1App.cc",
+  },
+  {
+    "content": "import inet.routing.base.RoutingProtocolBase;
 
 //
-// Generated network-layer protocol. Protocol-specific parameters are a project
-// Phase 4 fill-in.
+// Generated application-layer module from the WSN pattern machine pM1.
+// Network-layer wiring (handleUpper/LowerPacket bodies) is the next step.
 //
-simple MintRoute extends NetworkProtocolBase like INetworkProtocol
+simple Pm1App extends RoutingProtocolBase
 {
     parameters:
-        @class(MintRoute);
-        @display("i=block/fork");
+        @class(Pm1App);
+        @display("i=block/app");
 }
-"
+",
+    "path": "Pm1App.ned",
+  },
+]
 `;
 
-exports[`CodeEmitter — full-file snapshots > mintroute/omnetpp.ini 1`] = `
-"[General]
-network = WSN
-**.numHosts = 10
-**.host[*].networkLayer.typename = "MintRoute"
-"
-`;
-
-exports[`CodeEmitter — full-file snapshots > rtmcs/RTMCS.cc 1`] = `
-"#include "RTMCS.h"
-#include "inet/common/Protocol.h"
-
-// Detected patterns - CommPattern(packets: ndBuff, WiMedium, finalDestAddr, flood: floodTbl); RouteTable: pair (fwdRouteTbl, bwdRouteTbl); ENVPattern(link: wsnLinks, neighbours: ctlNeighbours, envNeighbours).
-
-Define_Module(RTMCS);
-
-static const Protocol rtmcsProtocol("rtmcs", "RTMCS", Protocol::NetworkLayer);
-
-const Protocol& RTMCS::getProtocol() const { return rtmcsProtocol; }
-
-void RTMCS::initialize(int stage) { NetworkProtocolBase::initialize(stage); }
-void RTMCS::handleUpperPacket(Packet *packet) { /* M4-M6 event bodies: project Phase 4 */ }
-void RTMCS::handleLowerPacket(Packet *packet) { /* M4-M6 event bodies: project Phase 4 */ }
-
-// --- Translated guard/action fragments (rule catalog R*/A*) ---------------
-// Reference C++ for the M4-M6 imperative bodies (project Phase 4 hand-completion).
-//   [A9] xmittedPkts ≔ ∅  =>  xmittedPkts.clear();
-//   [A9] middleware ≔ ∅  =>  middleware.clear();
-//   [A10] destBuff ≔  ND × {∅}  =>  destBuff.clear();
-//   [A9] finalDestAddr ≔ ∅  =>  finalDestAddr.clear();
-//   [A9] lostPkts ≔ ∅  =>  lostPkts.clear();
-//   [A7] s = initialSrcAddr(pkt)  =>  int s = initialSrcAddr.at(pkt);
-//   [R3] xmittedPkts ≔ xmittedPkts ∪ {pkt}  =>  xmittedPkts.insert(pkt);
-//   [R3] middleware ≔  middleware ∪  {pkt}  =>  middleware.insert(pkt);
-//   [A8] pkt ∈ dom(finalDestAddr)  =>  finalDestAddr.count(pkt) > 0
-//   [A7] des = finalDestAddr(pkt)  =>  int des = finalDestAddr.at(pkt);
-//   [A8] des ∈dom(destBuff)  =>  destBuff.count(des) > 0
-//   [R16] destBuff(des) ≔ destBuff(des) ∪ {pkt}  =>  destBuff[des].insert(pkt);
-//   [A6] pkt ∈ middleware  =>  middleware.count(pkt) > 0
-//   [A7] sk = finalDestAddr(pkt)  =>  int sk = finalDestAddr.at(pkt);
-//   [R4] middleware ≔  middleware ∖  {pkt}  =>  middleware.erase(pkt);
-//   [R3] lostPkts ≔ lostPkts ∪ {pkt}  =>  lostPkts.insert(pkt);
-//   [A2] middleware = ∅  =>  middleware.empty()
-//   [R14] finalDestAddr ≔  {pkt} ⩤ finalDestAddr  =>  finalDestAddr.erase(pkt);
-//   [A9] ndBuff ≔ ∅  =>  ndBuff.clear();
-//   [A9] WiMedium ≔ ∅  =>  WiMedium.clear();
-//   [A9] sensingNDs ≔ ∅  =>  sensingNDs.clear();
-//   [A9] sensedPkts ≔ ∅  =>  sensedPkts.clear();
-//   [A9] floodedPkts ≔ ∅  =>  floodedPkts.clear();
-//   [A10] floodTbl ≔ ND × {∅}  =>  floodTbl.clear();
-//   [A9] ctlNeighbours ≔ ∅  =>  ctlNeighbours.clear();
-//   [A9] recLostPkts ≔ ∅  =>  recLostPkts.clear();
-//   [A6] s ∉ sensingNDs  =>  sensingNDs.count(s) == 0
-//   [A8] s ∈ dom(floodTbl)  =>  floodTbl.count(s) > 0
-//   [R15] pkt ∉ floodTbl(s)  =>  (floodTbl.count(s) == 0 || floodTbl.at(s).count(pkt) == 0)
-//   [R3] sensingNDs ≔ sensingNDs ∪ {s}  =>  sensingNDs.insert(s);
-//   [R3] sensedPkts ≔ sensedPkts ∪ {pkt}  =>  sensedPkts.insert(pkt);
-//   [R16] floodTbl(s) ≔  floodTbl(s) ∪ {pkt}  =>  floodTbl[s].insert(pkt);
-//   [A8] x ∈ dom(floodFlg)  =>  floodFlg.count(x) > 0
-//   [R1] type(pkt)∈ CONTROL  =>  CONTROL.count(getType(pkt)) > 0
-//   [R3] floodedPkts ≔ floodedPkts ∪ {pkt}  =>  floodedPkts.insert(pkt);
-//   [A3] pkt ∈ ran(WiMedium) ∖ ran(recLostPkts)  =>  eb_in_range(WiMedium, pkt)
-//   [A2] nbrs ≠ ∅  =>  !nbrs.empty()
-//   [R15] pkt ∉ dom(ctlNeighbours)  =>  (dom.count(ctlNeighbours) == 0 || dom.at(ctlNeighbours).count(pkt) == 0)
-//   [A8] nb ∈ dom(floodTbl)  =>  floodTbl.count(nb) > 0
-//   [R15] pkt ∉ floodTbl(nb)  =>  (floodTbl.count(nb) == 0 || floodTbl.at(nb).count(pkt) == 0)
-//   [R16] floodTbl(nb) ≔  floodTbl(nb) ∪ {pkt}  =>  floodTbl[nb].insert(pkt);
-//   [A8] pkt ∈ dom(ctlNeighbours)  =>  ctlNeighbours.count(pkt) > 0
-//   [R11] {pkt} ◁ ctlNeighbours ≠ ∅  =>  (ctlNeighbours.count(pkt) > 0 && !ctlNeighbours.at(pkt).empty())
-//   [R16] floodTbl(des) ≔  floodTbl(des) ∪ {pkt}  =>  floodTbl[des].insert(pkt);
-//   [R11] {pkt} ◁ctlNeighbours = ∅  =>  (ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty())
-//   [A3] pkt ∈ ran(ndBuff)  =>  eb_in_range(ndBuff, pkt)
-//   [R15] pkt ∉ ran(ndBuff)  =>  (ran.count(ndBuff) == 0 || ran.at(ndBuff).count(pkt) == 0)
-//   [A2] WiMedium = ∅  =>  WiMedium.empty()
-//   [A2] ndBuff = ∅  =>  ndBuff.empty()
-//   [A10] recvedData ≔ Destination × {∅}  =>  recvedData.clear();
-//   [A9] pktData ≔ ∅  =>  pktData.clear();
-//   [A9] vPktData ≔ ∅  =>  vPktData.clear();
-//   [A7] sf = envSensedFlg(x)  =>  int sf = envSensedFlg.at(x);
-//   [A7] sd = envData(x)  =>  int sd = envData.at(x);
-//   [R16] senseBuff(x) ≔  senseBuff(x) ∪ {sd}  =>  senseBuff[x].insert(sd);
-//   [A8] x ∈ dom(envSensedFlg)  =>  envSensedFlg.count(x) > 0
-//   [A8] s ∈ dom(senseBuff)  =>  senseBuff.count(s) > 0
-//   [A2] senseBuff ≠ ∅  =>  !senseBuff.empty()
-//   [R15] pkt ∉ dom(pktData)  =>  (dom.count(pktData) == 0 || dom.at(pktData).count(pkt) == 0)
-//   [R15] pkt ∉ dom(vPktData)  =>  (dom.count(vPktData) == 0 || dom.at(vPktData).count(pkt) == 0)
-//   [A8] pkt ∈ dom(pktData)  =>  pktData.count(pkt) > 0
-//   [A7] data = pktData(pkt)  =>  int data = pktData.at(pkt);
-//   [R14] pktData ≔  {pkt} ⩤ pktData  =>  pktData.erase(pkt);
-//   [A8] pkt ∈ dom(vPktData)  =>  vPktData.count(pkt) > 0
-//   [A7] data = vPktData(pkt)  =>  int data = vPktData.at(pkt);
-//   [R14] vPktData ≔  {pkt} ⩤ vPktData  =>  vPktData.erase(pkt);
-//   [A8] des ∈ dom(recvedData)  =>  recvedData.count(des) > 0
-//   [R16] recvedData(des) ≔ recvedData(des) ∪ {data}  =>  recvedData[des].insert(data);
-//   [A8] act ∈ dom(recvedData)  =>  recvedData.count(act) > 0
-//   [A8] act ∈ dom(emergencyAlert)  =>  emergencyAlert.count(act) > 0
-//   [A9] sentUp≔ ∅  =>  sentUp.clear();
-//   [A9] sentDown≔ ∅  =>  sentDown.clear();
-//   [A9] channel ≔ ∅  =>  channel.clear();
-//   [A9] envNeighbours ≔ ∅  =>  envNeighbours.clear();
-//   [A9] wsnLinks ≔ ∅  =>  wsnLinks.clear();
-//   [A9] crashedLinks ≔ ∅  =>  crashedLinks.clear();
-//   [A9] nbHops ≔ ∅  =>  nbHops.clear();
-//   [A9] pktSeqNo ≔ ∅  =>  pktSeqNo.clear();
-//   [A9] pktSrc ≔ ∅  =>  pktSrc.clear();
-//   [A9] pktFwdr ≔ ∅  =>  pktFwdr.clear();
-//   [A9] pktNbHops ≔ ∅  =>  pktNbHops.clear();
-//   [A9] vPktSeqNo ≔ ∅  =>  vPktSeqNo.clear();
-//   [A9] vPktSrc ≔ ∅  =>  vPktSrc.clear();
-//   [A9] vPktFwdr ≔ ∅  =>  vPktFwdr.clear();
-//   [A9] vPktNbHops ≔ ∅  =>  vPktNbHops.clear();
-//   [A8] s ∈ dom(dataSeqNo)  =>  dataSeqNo.count(s) > 0
-//   [R15] pkt  ∉ dom(pktSeqNo)  =>  (dom.count(pktSeqNo) == 0 || dom.at(pktSeqNo).count(pkt) == 0)
-//   [R15] pkt ∉ dom(pktSrc)  =>  (dom.count(pktSrc) == 0 || dom.at(pktSrc).count(pkt) == 0)
-//   [R15] pkt ∉ dom(pktFwdr)  =>  (dom.count(pktFwdr) == 0 || dom.at(pktFwdr).count(pkt) == 0)
-//   [R15] pkt ∉ dom(pktNbHops)  =>  (dom.count(pktNbHops) == 0 || dom.at(pktNbHops).count(pkt) == 0)
-//   [R13] nbHops ≔  nbHops ∪ {s ↦ {pkt ↦ nbh}}  =>  nbHops[s][pkt] = nbh;
-//   [A8] s ∈ dom(floodSeqNo)  =>  floodSeqNo.count(s) > 0
-//   [A8] pkt ∈ dom(pktFwdr)  =>  pktFwdr.count(pkt) > 0
-//   [A8] pkt∈dom(pktNbHops)  =>  pktNbHops.count(pkt) > 0
-//   [A8] pkt ∈ dom(pktSeqNo)  =>  pktSeqNo.count(pkt) > 0
-//   [A7] sno = pktSeqNo(pkt)  =>  int sno = pktSeqNo.at(pkt);
-//   [A8] pkt ∈ dom(pktSrc)  =>  pktSrc.count(pkt) > 0
-//   [A7] src= pktSrc(pkt)  =>  int src = pktSrc.at(pkt);
-//   [A7] fwdr = pktFwdr(pkt)  =>  int fwdr = pktFwdr.at(pkt);
-//   [A7] nbh = pktNbHops(pkt)  =>  int nbh = pktNbHops.at(pkt);
-//   [R15] pkt ∉ dom(vPktSeqNo)  =>  (dom.count(vPktSeqNo) == 0 || dom.at(vPktSeqNo).count(pkt) == 0)
-//   [R15] pkt ∉ dom(vPktFwdr)  =>  (dom.count(vPktFwdr) == 0 || dom.at(vPktFwdr).count(pkt) == 0)
-//   [R15] pkt ∉ dom(vPktSrc)  =>  (dom.count(vPktSrc) == 0 || dom.at(vPktSrc).count(pkt) == 0)
-//   [R15] pkt ∉ dom(vPktNbHops)  =>  (dom.count(vPktNbHops) == 0 || dom.at(vPktNbHops).count(pkt) == 0)
-//   [R14] pktSeqNo ≔  {pkt} ⩤ pktSeqNo  =>  pktSeqNo.erase(pkt);
-//   [R14] pktSrc ≔  {pkt} ⩤ pktSrc  =>  pktSrc.erase(pkt);
-//   [R14] pktFwdr ≔  {pkt} ⩤ pktFwdr  =>  pktFwdr.erase(pkt);
-//   [R14] pktNbHops ≔  {pkt} ⩤ pktNbHops  =>  pktNbHops.erase(pkt);
-//   [A2] channel ≠ ∅  =>  !channel.empty()
-//   [A3] pkt ∈ ran(channel)  =>  eb_in_range(channel, pkt)
-//   [R7] nbs = wsnLinks[{f}]  =>  const std::set<int>& nbs = wsnLinks.at(f);
-//   [A2] nbs ≠ ∅  =>  !nbs.empty()
-//   [A2] envNeighbours = ∅  =>  envNeighbours.empty()
-//   [A6] nb ∈ nbs  =>  nbs.count(nb) > 0
-//   [A2] nbs = ∅  =>  nbs.empty()
-//   [A3] pkt ∈ ran(sentDown)  =>  eb_in_range(sentDown, pkt)
-//   [R6] nbrs = ran({pkt} ◁ envNeighbours)  =>  const std::set<int>& nbrs = envNeighbours.at(pkt);
-//   [A8] pkt ∈ dom(vPktSeqNo)  =>  vPktSeqNo.count(pkt) > 0
-//   [A7] sno = vPktSeqNo(pkt)  =>  int sno = vPktSeqNo.at(pkt);
-//   [A8] pkt ∈ dom(vPktSrc)  =>  vPktSrc.count(pkt) > 0
-//   [A7] src = vPktSrc(pkt)  =>  int src = vPktSrc.at(pkt);
-//   [A8] pkt ∈ dom(vPktFwdr)  =>  vPktFwdr.count(pkt) > 0
-//   [A7] fwdr = vPktFwdr(pkt)  =>  int fwdr = vPktFwdr.at(pkt);
-//   [A8] pkt ∈ dom(vPktNbHops)  =>  vPktNbHops.count(pkt) > 0
-//   [A7] nbh = vPktNbHops(pkt)  =>  int nbh = vPktNbHops.at(pkt);
-//   [R14] vPktSeqNo ≔  {pkt} ⩤ vPktSeqNo  =>  vPktSeqNo.erase(pkt);
-//   [R14] vPktSrc ≔  {pkt} ⩤ vPktSrc  =>  vPktSrc.erase(pkt);
-//   [R14] vPktFwdr ≔  {pkt} ⩤ vPktFwdr  =>  vPktFwdr.erase(pkt);
-//   [R14] vPktNbHops ≔  {pkt} ⩤ vPktNbHops  =>  vPktNbHops.erase(pkt);
-//   [R10] pkt ∈ ran(sentUp ∪ sentDown)  =>  eb_in_range_union(sentUp, sentDown, pkt)
-//   [R12] nb ∉ dom(sentUp ∪ sentDown)  =>  !eb_in_dom_union_pairset(sentUp, sentDown, nb)
-//   [R13] nbHops ≔  nbHops ∪  {nb ↦ {pkt ↦ nbh}}  =>  nbHops[nb][pkt] = nbh;
-//   [A5] pkt ∈ ran(sentUp ∪ sentDown)∖destBuff(des)  =>  eb_in_range_union(sentUp, sentDown, pkt) && destBuff.at(des).count(pkt) == 0
-//   [A3] pkt ∈ ran(sentUp)  =>  eb_in_range(sentUp, pkt)
-//   [R15] pkt ∉ ran(sentDown)  =>  (ran.count(sentDown) == 0 || ran.at(sentDown).count(pkt) == 0)
-//   [R15] pkt ∉ ran(recLostPkts)  =>  (ran.count(recLostPkts) == 0 || ran.at(recLostPkts).count(pkt) == 0)
-//   [A9] bwdRouteTbl ≔ ∅  =>  bwdRouteTbl.clear();
-//   [A9] bwdSeqNo ≔ ∅  =>  bwdSeqNo.clear();
-//   [A9] bwdNextND ≔ ∅  =>  bwdNextND.clear();
-//   [A9] bwdHopCnt ≔ ∅  =>  bwdHopCnt.clear();
-//   [A9] updateNbrs ≔ ∅  =>  updateNbrs.clear();
-//   [A8] x ∈ dom(linkSeqNo)  =>  linkSeqNo.count(x) > 0
-//   [A2] updateNbrs ≠ ∅  =>  !updateNbrs.empty()
-//   [A8] pkt ∈ dom(initialSrcAddr)  =>  initialSrcAddr.count(pkt) > 0
-//   [A7] sNo = netSeqNo(pkt)  =>  int sNo = netSeqNo.at(pkt);
-//   [A2] ctlNeighbours = ∅  =>  ctlNeighbours.empty()
-//   [A9] fwdRouteTbl ≔ ∅  =>  fwdRouteTbl.clear();
-//   [A9] fwdSeqNo ≔ ∅  =>  fwdSeqNo.clear();
-//   [A9] fwdNextND ≔ ∅  =>  fwdNextND.clear();
-//   [A9] fwdHopCnt ≔ ∅  =>  fwdHopCnt.clear();
-//   [A9] rrepLists ≔ ∅  =>  rrepLists.clear();
-//   [A9] netDestAddr ≔ ∅  =>  netDestAddr.clear();
-//   [A9] envDestAddr ≔ ∅  =>  envDestAddr.clear();
-//   [R15] pkt ∉ dom(netDestAddr)  =>  (dom.count(netDestAddr) == 0 || dom.at(netDestAddr).count(pkt) == 0)
-//   [A8] x ∈ dom(rrepLists)  =>  eb_in_dom_pairset(rrepLists, x)
-//   [A7] fDes = initialSrcAddr(rreq)  =>  int fDes = initialSrcAddr.at(rreq);
-//   [R17] s ∈ran({x}◁dom(fwdNextND))  =>  domRestrictedRange(fwdNextND, x).count(s) > 0
-//   [R18] nxt = fwdNextND(x↦s)  =>  int nxt = tupleApply(fwdNextND, x, s);
-//   [A8] x ∈ dom(rrepSeqNo)  =>  rrepSeqNo.count(x) > 0
-//   [R2] x↦s ∈ dom(bwdNextND)  =>  bwdNextND.find({x, s}) != bwdNextND.end()
-//   [R18] nxt = bwdNextND(x↦s)  =>  int nxt = tupleApply(bwdNextND, x, s);
-//   [A8] pkt ∈ dom(netDestAddr)  =>  netDestAddr.count(pkt) > 0
-//   [A7] s = finalDestAddr(pkt)  =>  int s = finalDestAddr.at(pkt);
-//   [A7] nxt=netDestAddr(pkt)  =>  int nxt = netDestAddr.at(pkt);
-//   [R15] pkt ∉ dom(envDestAddr)  =>  (dom.count(envDestAddr) == 0 || dom.at(envDestAddr).count(pkt) == 0)
-//   [R14] netDestAddr ≔  {pkt} ⩤ netDestAddr  =>  netDestAddr.erase(pkt);
-//   [A9] rrerLists ≔  ∅  =>  rrerLists.clear();
-//   [A9] pktErrND ≔ ∅  =>  pktErrND.clear();
-//   [A9] errND ≔ ∅  =>  errND.clear();
-//   [A8] rrer ∈ dom(initialSrcAddr)  =>  initialSrcAddr.count(rrer) > 0
-//   [A7] fDes = initialSrcAddr(rrer)  =>  int fDes = initialSrcAddr.at(rrer);
-//   [R15] pkt ∉ dom(pktErrND)  =>  (dom.count(pktErrND) == 0 || dom.at(pktErrND).count(pkt) == 0)
-//   [A7] fDes = finalDestAddr(pkt)  =>  int fDes = finalDestAddr.at(pkt);
-//   [R17] fDes∈ran({x}◁dom(bwdNextND))  =>  domRestrictedRange(bwdNextND, x).count(fDes) > 0
-//   [R18] nxt = bwdNextND(x↦fDes)  =>  int nxt = tupleApply(bwdNextND, x, fDes);
-//   [A6] nxt ∉ nbs  =>  nbs.count(nxt) == 0
-"
-`;
-
-exports[`CodeEmitter — full-file snapshots > rtmcs/RTMCS.h 1`] = `
-"#pragma once
+exports[`snapshot: shDecom6_2 → INET C++ > pM3 1`] = `
+[
+  {
+    "content": "#pragma once
 #include <map>
 #include <set>
 #include <utility>
 #include "eb_helpers.h"
-#include "inet/networklayer/base/NetworkProtocolBase.h"
-#include "inet/networklayer/contract/INetworkProtocol.h"
+#include "eb_context.h"
+#include "inet/routing/base/RoutingProtocolBase.h"
 
 using namespace inet;
 
-class RTMCS : public NetworkProtocolBase, public INetworkProtocol {
- protected:
-  std::map<int, int> xmittedPkts;
-  std::map<int, int> middleware;
-  std::map<int, std::set<int>> destBuff;
-  std::map<int, int> finalDestAddr;
-  std::map<int, int> lostPkts;
-  std::set<std::pair<int,int>> ndBuff;
-  std::set<std::pair<int,int>> WiMedium;
-  std::map<int, int> sensingNDs;
-  std::map<int, int> sensedPkts;
-  std::map<int, int> floodedPkts;
-  std::map<int, std::set<int>> floodTbl;
-  std::map<int, std::set<int>> ctlNeighbours;
-  std::map<int, int> floodFlg;
-  std::set<std::pair<int,int>> recLostPkts;
-  std::map<int, int> envSensedFlg;
-  std::map<int, int> envData;
-  std::map<int, int> ctlSensedFlg;
-  std::map<int, int> senseBuff;
-  std::map<int, int> recvedData;
-  std::map<int, int> emergencyAlert;
-  std::map<int, int> pktData;
-  std::map<int, int> vPktData;
-  std::set<std::pair<int,int>> sentUp;
-  std::set<std::pair<int,int>> sentDown;
-  std::set<std::pair<int,int>> channel;
-  std::map<int, std::set<int>> envNeighbours;
-  std::map<int, std::set<int>> wsnLinks;
-  std::map<int, int> crashedLinks;
-  std::map<int, int> dataSeqNo;
-  std::map<int, int> floodSeqNo;
-  std::map<int, int> nbHops;
-  std::map<int, int> pktSeqNo;
-  std::map<int, int> pktSrc;
-  std::map<int, int> pktFwdr;
-  std::map<int, int> vPktNbHops;
-  std::map<int, int> vPktSrc;
-  std::map<int, int> pktNbHops;
-  std::map<int, int> vPktSeqNo;
-  std::map<int, int> vPktFwdr;
-  std::set<std::pair<int,int>> bwdRouteTbl;
-  std::map<std::pair<int,int>, int> bwdNextND;
-  std::map<std::pair<int,int>, int> bwdSeqNo;
-  std::map<std::pair<int,int>, int> bwdHopCnt;
-  std::map<int, int> netSeqNo;
-  std::map<int, int> linkSeqNo;
-  std::set<std::pair<int,int>> updateNbrs;
-  std::set<std::pair<int,int>> fwdRouteTbl;
-  std::map<std::pair<int,int>, int> fwdNextND;
-  std::map<std::pair<int,int>, int> fwdSeqNo;
-  std::map<std::pair<int,int>, int> fwdHopCnt;
-  std::set<std::pair<int,int>> rrepLists;
-  std::map<int, int> rrepSeqNo;
-  std::map<int, int> netDestAddr;
-  std::map<int, int> envDestAddr;
-  std::map<int, int> rrepFlg;
-  std::set<std::pair<int,int>> rrerLists;
-  std::map<int, int> pktErrND;
-  std::set<std::pair<int,int>> errND;
-  std::map<int, int> rrerFlg;
+class Pm3App : public RoutingProtocolBase {
+  protected:
+    std::map<PktId, Node> pktFwdr;
+    std::map<PktId, Data> pktData;
+    std::set<PktId> createdPkts;
+    std::set<std::pair<Node, PktId>> ndBuff;
+    std::set<std::pair<Node, PktId>> sentUp;
+    std::set<std::pair<Node, PktId>> sentDown;
+    std::map<PktId, std::set<Node>> ctlNeighbours;
+    std::set<std::pair<Node, PktId>> destBuff;
+    std::set<std::pair<Node, PktId>> recvBuff;
+    std::set<std::pair<Node, PktId>> clrRecvBuffFlg;
+    std::map<Node, bool> ctlSensedFlg;
+    std::map<Node, std::set<Data>> senseBuff;
 
-  // Protocol identity; defined in the .cc against a file-local Protocol.
-  const Protocol& getProtocol() const override;
+    // OperationalBase pure virtuals — empty stubs keep the module concrete
+    // (real message handling is the network-layer next step).
+    void handleMessageWhenUp(cMessage *msg) override { delete msg; }
+    void handleStartOperation(LifecycleOperation *op) override {}
+    void handleStopOperation(LifecycleOperation *op) override {}
+    void handleCrashOperation(LifecycleOperation *op) override {}
 
-  void handleUpperPacket(Packet *packet) override;
-  void handleLowerPacket(Packet *packet) override;
-  void initialize(int stage) override;
+    // Application-layer events (translated from the Event-B pattern machine).
+    bool sensing(Node x, bool sf, Data data);
+    bool creatingDataPacket(Node x, int des, PktId pkt, Data data);
+    bool creatingControlPacket(Node x, int des, PktId pkt, Data data);
+    bool start_tx(Node x, PktId pkt);
+    bool send_down(Node x, PktId pkt);
+    bool send_up(Node x, PktId pkt, int nbrs);
+    bool receive(Node nb, PktId pkt);
+    bool clear_recvdBuff(Node nb, PktId pkt);
+    bool fwdr_receive_pkt(Node nb, PktId pkt);
+    bool dest_recv_pkt(Node nb, PktId pkt);
+    bool finish_tx_pkt(Node x, PktId pkt);
+    bool final_tx_pkt(PktId pkt);
 
-  // Lifecycle hooks are pure virtual in OperationalMixin; empty bodies keep the
-  // module concrete. Start/stop/crash logic is a project Phase 4 fill-in.
-  void handleStartOperation(LifecycleOperation *operation) override {}
-  void handleStopOperation(LifecycleOperation *operation) override {}
-  void handleCrashOperation(LifecycleOperation *operation) override {}
+  public:
+    Pm3App();
 };
-"
-`;
+",
+    "path": "Pm3App.h",
+  },
+  {
+    "content": "#include "Pm3App.h"
 
-exports[`CodeEmitter — full-file snapshots > rtmcs/RTMCS.ned 1`] = `
-"import inet.networklayer.base.NetworkProtocolBase;
-import inet.networklayer.contract.INetworkProtocol;
+Define_Module(Pm3App);
+
+Pm3App::Pm3App() {
+    pktFwdr.clear();
+    pktData.clear();
+    createdPkts.clear();
+    ndBuff.clear();
+    sentUp.clear();
+    sentDown.clear();
+    ctlNeighbours.clear();
+    destBuff.clear();
+    recvBuff.clear();
+    clrRecvBuffFlg.clear();
+    for (int _n : ND) if (Dests.count(_n) == 0) ctlSensedFlg[_n] = FALSE;
+    for (int _n : ND) if (Dests.count(_n) == 0) senseBuff[_n] = {};
+}
+
+bool Pm3App::sensing(Node x, bool sf, Data data) {
+    if (!((ND.count(x) > 0 && Dests.count(x) == 0))) return false;
+    if (!(ctlSensedFlg.count(x) > 0)) return false;
+    if (!(ctlSensedFlg.at(x) == FALSE)) return false;
+    ctlSensedFlg[x] = sf;
+    senseBuff[x].insert(data);
+    return true;
+}
+
+bool Pm3App::creatingDataPacket(Node x, int des, PktId pkt, Data data) {
+    if (!((ND.count(x) > 0 && Dests.count(x) == 0))) return false;
+    if (!(x == initialSrcAddr.at(pkt))) return false;
+    if (!(des == finalDestAddr.at(pkt))) return false;
+    if (!(pktFwdr.count(pkt) == 0)) return false;
+    if (!(pktData.count(pkt) == 0)) return false;
+    if (!(ndBuff.count({x, pkt}) == 0)) return false;
+    if (!(type.at(pkt) == DATA)) return false;
+    if (!(!senseBuff.empty())) return false;
+    if (!((senseBuff.count(x) > 0 && senseBuff.at(x).count(data) > 0))) return false;
+    createdPkts.insert(pkt);
+    pktFwdr[pkt] = x;
+    pktData[pkt] = data;
+    ndBuff.insert({x, pkt});
+    senseBuff[x].erase(data); if (senseBuff[x].empty()) senseBuff.erase(x);
+    return true;
+}
+
+bool Pm3App::creatingControlPacket(Node x, int des, PktId pkt, Data data) {
+    if (!((ND.count(x) > 0 && Dests.count(x) == 0))) return false;
+    if (!(x == initialSrcAddr.at(pkt))) return false;
+    if (!(des == finalDestAddr.at(pkt))) return false;
+    if (!(pktFwdr.count(pkt) == 0)) return false;
+    if (!(pktData.count(pkt) == 0)) return false;
+    if (!(ndBuff.count({x, pkt}) == 0)) return false;
+    if (!(data == CTL_VAL)) return false;
+    createdPkts.insert(pkt);
+    pktFwdr[pkt] = x;
+    pktData[pkt] = data;
+    ndBuff.insert({x, pkt});
+    return true;
+}
+
+bool Pm3App::start_tx(Node x, PktId pkt) {
+    if (!(sentDown.count({x, pkt}) == 0)) return false;
+    if (!(sentUp.count({x, pkt}) == 0)) return false;
+    if (!(pktFwdr.count(pkt) > 0)) return false;
+    if (!(ndBuff.count({x, pkt}) > 0)) return false;
+    sentDown.insert({x, pkt});
+    ndBuff.erase({x, pkt});
+    return true;
+}
+
+bool Pm3App::send_down(Node x, PktId pkt) {
+    return sentDown.count({x, pkt}) > 0;
+}
+
+bool Pm3App::send_up(Node x, PktId pkt, int nbrs) {
+    if (!(sentUp.count({x, pkt}) == 0)) return false;
+    if (!(sentDown.count({x, pkt}) > 0)) return false;
+    if (!(ctlNeighbours.count(pkt) == 0)) return false;
+    if (!(!nbrs.empty())) return false;
+    for (auto _v : nbrs) ctlNeighbours[pkt].insert(_v);
+    sentDown.erase({x, pkt});
+    sentUp.insert({x, pkt});
+    return true;
+}
+
+bool Pm3App::receive(Node nb, PktId pkt) {
+    if (!(recvBuff.count({nb, pkt}) == 0)) return false;
+    if (!(sentUp.count({nb, pkt}) == 0)) return false;
+    if (!(sentDown.count({nb, pkt}) == 0)) return false;
+    recvBuff.insert({nb, pkt});
+    ctlNeighbours[pkt].erase(nb); if (ctlNeighbours[pkt].empty()) ctlNeighbours.erase(pkt);
+    return true;
+}
+
+bool Pm3App::clear_recvdBuff(Node nb, PktId pkt) {
+    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) > 0)) return false;
+    recvBuff.erase({nb, pkt});
+    return true;
+}
+
+bool Pm3App::fwdr_receive_pkt(Node nb, PktId pkt) {
+    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0)) return false;
+    if (!(Dests.count(nb) == 0)) return false;
+    if (!(ndBuff.count({nb, pkt}) == 0)) return false;
+    clrRecvBuffFlg.insert({nb, pkt});
+    ndBuff.insert({nb, pkt});
+    return true;
+}
+
+bool Pm3App::dest_recv_pkt(Node nb, PktId pkt) {
+    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0)) return false;
+    if (!(destBuff.count({nb, pkt}) == 0)) return false;
+    destBuff.insert({nb, pkt});
+    clrRecvBuffFlg.insert({nb, pkt});
+    return true;
+}
+
+bool Pm3App::finish_tx_pkt(Node x, PktId pkt) {
+    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty()))) return false;
+    if (!(inRan(sentUp, pkt))) return false;
+    if (!(!inRan(sentDown, pkt))) return false;
+    if (!(inDom(sentUp, x))) return false;
+    if (!(sentUp.count({x, pkt}) > 0)) return false;
+    if (!(inRan(ndBuff, pkt))) return false;
+    sentUp.erase({x, pkt});
+    return true;
+}
+
+bool Pm3App::final_tx_pkt(PktId pkt) {
+    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty()))) return false;
+    if (!(inRan(sentUp, pkt))) return false;
+    if (!(!inRan(sentDown, pkt))) return false;
+    if (!(!inRan(ndBuff, pkt))) return false;
+    for (auto it = sentUp.begin(); it != sentUp.end(); ) it->second == pkt ? it = sentUp.erase(it) : ++it;
+    return true;
+}
+",
+    "path": "Pm3App.cc",
+  },
+  {
+    "content": "import inet.routing.base.RoutingProtocolBase;
 
 //
-// Generated network-layer protocol. Protocol-specific parameters are a project
-// Phase 4 fill-in.
+// Generated application-layer module from the WSN pattern machine pM3.
+// Network-layer wiring (handleUpper/LowerPacket bodies) is the next step.
 //
-simple RTMCS extends NetworkProtocolBase like INetworkProtocol
+simple Pm3App extends RoutingProtocolBase
 {
     parameters:
-        @class(RTMCS);
-        @display("i=block/fork");
+        @class(Pm3App);
+        @display("i=block/app");
 }
-"
+",
+    "path": "Pm3App.ned",
+  },
+]
 `;
 
-exports[`CodeEmitter — full-file snapshots > rtmcs/omnetpp.ini 1`] = `
-"[General]
-network = WSN
-**.numHosts = 10
-**.host[*].networkLayer.typename = "RTMCS"
-"
+exports[`snapshot: shDecom6_2 → INET C++ > uM2 1`] = `
+[
+  {
+    "content": "#pragma once
+#include <map>
+#include <set>
+#include <utility>
+#include "eb_helpers.h"
+#include "eb_context.h"
+#include "inet/routing/base/RoutingProtocolBase.h"
+
+using namespace inet;
+
+class Um2App : public RoutingProtocolBase {
+  protected:
+    std::map<PktId, Node> pktFwdr;
+    std::map<PktId, Data> pktData;
+    std::set<PktId> createdPkts;
+    std::set<std::pair<Node, PktId>> ndBuff;
+    std::set<std::pair<Node, PktId>> sentUp;
+    std::set<std::pair<Node, PktId>> sentDown;
+    std::map<PktId, std::set<Node>> ctlNeighbours;
+    std::set<std::pair<Node, PktId>> destBuff;
+    std::set<std::pair<Node, PktId>> recvBuff;
+    std::set<std::pair<Node, PktId>> clrRecvBuffFlg;
+
+    // OperationalBase pure virtuals — empty stubs keep the module concrete
+    // (real message handling is the network-layer next step).
+    void handleMessageWhenUp(cMessage *msg) override { delete msg; }
+    void handleStartOperation(LifecycleOperation *op) override {}
+    void handleStopOperation(LifecycleOperation *op) override {}
+    void handleCrashOperation(LifecycleOperation *op) override {}
+
+    // Application-layer events (translated from the Event-B pattern machine).
+    bool creatingControlPacket(Node x, int des, PktId pkt, Data data);
+    bool start_tx(Node x, PktId pkt);
+    bool send_down(Node x, PktId pkt);
+    bool send_up(Node x, PktId pkt, int nbrs);
+    bool receive(Node nb, PktId pkt);
+    bool clear_recvdBuff(Node nb, PktId pkt);
+    bool fwdr_receive_pkt(Node nb, PktId pkt);
+    bool dest_recv_pkt(Node nb, PktId pkt);
+    bool finish_tx_pkt(Node x, PktId pkt);
+    bool final_tx_pkt(PktId pkt);
+    bool creatingDataPacket(Node x, int des, PktId pkt, Data data);
+
+  public:
+    Um2App();
+};
+",
+    "path": "Um2App.h",
+  },
+  {
+    "content": "#include "Um2App.h"
+
+Define_Module(Um2App);
+
+Um2App::Um2App() {
+    pktFwdr.clear();
+    pktData.clear();
+    createdPkts.clear();
+    ndBuff.clear();
+    sentUp.clear();
+    sentDown.clear();
+    ctlNeighbours.clear();
+    destBuff.clear();
+    recvBuff.clear();
+    clrRecvBuffFlg.clear();
+}
+
+bool Um2App::creatingControlPacket(Node x, int des, PktId pkt, Data data) {
+    if (!((ND.count(x) > 0 && Dests.count(x) == 0))) return false;
+    if (!(x == initialSrcAddr.at(pkt))) return false;
+    if (!(des == finalDestAddr.at(pkt))) return false;
+    if (!(pktFwdr.count(pkt) == 0)) return false;
+    if (!(pktData.count(pkt) == 0)) return false;
+    if (!(ndBuff.count({x, pkt}) == 0)) return false;
+    if (!(data == CTL_VAL)) return false;
+    createdPkts.insert(pkt);
+    pktFwdr[pkt] = x;
+    pktData[pkt] = data;
+    ndBuff.insert({x, pkt});
+    return true;
+}
+
+bool Um2App::start_tx(Node x, PktId pkt) {
+    if (!(sentDown.count({x, pkt}) == 0)) return false;
+    if (!(sentUp.count({x, pkt}) == 0)) return false;
+    if (!(pktFwdr.count(pkt) > 0)) return false;
+    if (!(ndBuff.count({x, pkt}) > 0)) return false;
+    sentDown.insert({x, pkt});
+    ndBuff.erase({x, pkt});
+    return true;
+}
+
+bool Um2App::send_down(Node x, PktId pkt) {
+    return sentDown.count({x, pkt}) > 0;
+}
+
+bool Um2App::send_up(Node x, PktId pkt, int nbrs) {
+    if (!(sentUp.count({x, pkt}) == 0)) return false;
+    if (!(sentDown.count({x, pkt}) > 0)) return false;
+    if (!(ctlNeighbours.count(pkt) == 0)) return false;
+    if (!(!nbrs.empty())) return false;
+    for (auto _v : nbrs) ctlNeighbours[pkt].insert(_v);
+    sentDown.erase({x, pkt});
+    sentUp.insert({x, pkt});
+    return true;
+}
+
+bool Um2App::receive(Node nb, PktId pkt) {
+    if (!(recvBuff.count({nb, pkt}) == 0)) return false;
+    if (!(sentUp.count({nb, pkt}) == 0)) return false;
+    if (!(sentDown.count({nb, pkt}) == 0)) return false;
+    recvBuff.insert({nb, pkt});
+    ctlNeighbours[pkt].erase(nb); if (ctlNeighbours[pkt].empty()) ctlNeighbours.erase(pkt);
+    return true;
+}
+
+bool Um2App::clear_recvdBuff(Node nb, PktId pkt) {
+    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) > 0)) return false;
+    recvBuff.erase({nb, pkt});
+    return true;
+}
+
+bool Um2App::fwdr_receive_pkt(Node nb, PktId pkt) {
+    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0)) return false;
+    if (!(Dests.count(nb) == 0)) return false;
+    if (!(ndBuff.count({nb, pkt}) == 0)) return false;
+    clrRecvBuffFlg.insert({nb, pkt});
+    ndBuff.insert({nb, pkt});
+    return true;
+}
+
+bool Um2App::dest_recv_pkt(Node nb, PktId pkt) {
+    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0)) return false;
+    if (!(destBuff.count({nb, pkt}) == 0)) return false;
+    destBuff.insert({nb, pkt});
+    clrRecvBuffFlg.insert({nb, pkt});
+    return true;
+}
+
+bool Um2App::finish_tx_pkt(Node x, PktId pkt) {
+    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty()))) return false;
+    if (!(inRan(sentUp, pkt))) return false;
+    if (!(!inRan(sentDown, pkt))) return false;
+    if (!(inDom(sentUp, x))) return false;
+    if (!(sentUp.count({x, pkt}) > 0)) return false;
+    if (!(inRan(ndBuff, pkt))) return false;
+    sentUp.erase({x, pkt});
+    return true;
+}
+
+bool Um2App::final_tx_pkt(PktId pkt) {
+    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty()))) return false;
+    if (!(inRan(sentUp, pkt))) return false;
+    if (!(!inRan(sentDown, pkt))) return false;
+    if (!(!inRan(ndBuff, pkt))) return false;
+    for (auto it = sentUp.begin(); it != sentUp.end(); ) it->second == pkt ? it = sentUp.erase(it) : ++it;
+    return true;
+}
+
+bool Um2App::creatingDataPacket(Node x, int des, PktId pkt, Data data) {
+    if (!((ND.count(x) > 0 && Dests.count(x) == 0))) return false;
+    if (!(x == initialSrcAddr.at(pkt))) return false;
+    if (!(des == finalDestAddr.at(pkt))) return false;
+    if (!(pktFwdr.count(pkt) == 0)) return false;
+    if (!(pktData.count(pkt) == 0)) return false;
+    if (!(ndBuff.count({x, pkt}) == 0)) return false;
+    if (!(type.at(pkt) == DATA)) return false;
+    createdPkts.insert(pkt);
+    pktFwdr[pkt] = x;
+    pktData[pkt] = data;
+    ndBuff.insert({x, pkt});
+    return true;
+}
+",
+    "path": "Um2App.cc",
+  },
+  {
+    "content": "import inet.routing.base.RoutingProtocolBase;
+
+//
+// Generated application-layer module from the WSN pattern machine uM2.
+// Network-layer wiring (handleUpper/LowerPacket bodies) is the next step.
+//
+simple Um2App extends RoutingProtocolBase
+{
+    parameters:
+        @class(Um2App);
+        @display("i=block/app");
+}
+",
+    "path": "Um2App.ned",
+  },
+]
 `;
