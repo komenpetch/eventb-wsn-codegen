@@ -1,54 +1,41 @@
-import type {
-  ResolvedModel, DetectedPatterns, EncodedModel, EncodingForm,
-} from "./types";
+import type { FlatMachine, EncodedMachine, EncodingForm } from "./types";
 
-// Authoritative seed table (spec §5 example-variable lists). Wins over inference
-// for the three case studies.
-const SEED: Record<string, EncodingForm> = {
-  fwdNextND: "pair-keyed", bwdNextND: "pair-keyed", dsrPath: "pair-keyed",
-  ctlNeighbours: "map-of-sets", envNeighbours: "map-of-sets",
-  wsnLinks: "map-of-sets", floodTbl: "map-of-sets", destBuff: "map-of-sets",
-  bwdRouteTbl: "pair-set", fwdRouteTbl: "pair-set", sentUp: "pair-set", sentDown: "pair-set",
-};
-
-export function resolveEncodings(model: ResolvedModel, patterns: DetectedPatterns): EncodedModel {
+export function resolveEncodings(machine: FlatMachine): EncodedMachine {
   const encodings = new Map<string, EncodingForm>();
-  for (const [id, invariant] of model.variableTypes) {
-    encodings.set(id, SEED[id] ?? infer(id, invariant, model));
-  }
-  return { ...model, encodings, patterns };
+  for (const [id, inv] of machine.variableTypes)
+    encodings.set(id, infer(id, inv, machine));
+  return { ...machine, encodings };
 }
 
-function infer(id: string, invariant: string, model: ResolvedModel): EncodingForm {
-  const rhs = invariant.replace(/^[^∈]*∈\s*/, "");          // type after ∈
+function infer(id: string, invariant: string, machine: FlatMachine): EncodingForm {
+  const rhs = invariant.replace(/^[^∈⊆]*[∈⊆]\s*/, "").trim();   // type after ∈ / ⊆
+
+  // ENC3 function (total/partial). A → ℙ(B) is map-of-sets (ENC5), not function.
   if (/→|⇸/.test(rhs)) {
-    return isProductDomainFunction(rhs, model) ? "pair-keyed" : "function";
+    if (/(→|⇸)\s*ℙ\(/.test(rhs)) return "map-of-sets";          // ENC5: → ℙ(B)
+    return "function";                                          // ENC3 (incl. → BOOL)
   }
+  // Relation A ↔ B: ENC5 if accessed per key, else ENC4 pair-set.
   if (/↔/.test(rhs)) {
-    if (/↔\s*ℙ\(/.test(rhs)) return "map-of-sets";          // A ↔ ℙ(B)
-    return usesKeySetAccess(id, model) ? "map-of-sets" : "pair-set";
+    if (/↔\s*ℙ\(/.test(rhs)) return "map-of-sets";
+    return usesKeyAccess(id, machine) ? "map-of-sets" : "pair-set";
   }
-  return "function"; // subsets/flags default
+  // ⊆ T / ℙ(T) with no arrow → ENC2 plain set.
+  if (/^ℙ\(/.test(rhs) || /⊆/.test(invariant)) return "set";
+  return "set";   // safe default for an un-typed subset variable
 }
 
-function isProductDomainFunction(rhs: string, model: ResolvedModel): boolean {
-  const dom = rhs.split(/→|⇸/)[0].trim();
-  if (/×/.test(dom)) return true;
-  const domType = model.variableTypes.get(dom);
-  return !!domType && /↔/.test(domType);
-}
-
-function usesKeySetAccess(id: string, model: ResolvedModel): boolean {
+// ENC4 vs ENC5: a relation is map-of-sets when the machine reads/writes it by a
+// single key — {k}◁id, id(k), or id ≔ id ∪ ({k}×s) — not only by whole pairs.
+function usesKeyAccess(id: string, machine: FlatMachine): boolean {
   const esc = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const patterns = [
-    new RegExp(`◁\\s*${esc}\\b`), // {k} ◁ id
-    new RegExp(`\\b${esc}\\s*\\(`), // id(k)
+  const keyForms = [
+    new RegExp(`◁\\s*${esc}\\b`),                       // {k} ◁ id
+    new RegExp(`\\b${esc}\\s*\\(`),                     // id(k)
+    new RegExp(`\\b${esc}\\s*≔\\s*${esc}\\s*∪\\s*\\(\\{`),  // id ≔ id ∪ ({k}×s)
   ];
-  for (const m of model.machines) {
-    for (const ev of m.events) {
-      const texts = [...ev.guards, ...ev.actions].map((x) => x.text);
-      if (texts.some((t) => patterns.some((p) => p.test(t)))) return true;
-    }
-  }
+  for (const ev of machine.events)
+    for (const t of [...ev.guards, ...ev.actions])
+      if (keyForms.some((p) => p.test(t))) return true;
   return false;
 }
