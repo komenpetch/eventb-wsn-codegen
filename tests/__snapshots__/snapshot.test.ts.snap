@@ -37,7 +37,7 @@ class Pm1App : public RoutingProtocolBase {
     bool creatingPkt(Node x, int des, PktId pkt, Data data);
     bool start_tx(Node x, PktId pkt);
     bool send_down(Node x, PktId pkt);
-    bool send_up(Node x, PktId pkt, int nbrs);
+    bool send_up(Node x, PktId pkt, const std::set<Node>& nbrs);
     bool receive(Node nb, PktId pkt);
     bool clear_recvdBuff(Node nb, PktId pkt);
     bool fwdr_receive_pkt(Node nb, PktId pkt);
@@ -97,7 +97,7 @@ bool Pm1App::send_down(Node x, PktId pkt) {
     return sentDown.count({x, pkt}) > 0;
 }
 
-bool Pm1App::send_up(Node x, PktId pkt, int nbrs) {
+bool Pm1App::send_up(Node x, PktId pkt, const std::set<Node>& nbrs) {
     if (!(sentUp.count({x, pkt}) == 0)) return false;
     if (!(sentDown.count({x, pkt}) > 0)) return false;
     if (!(ctlNeighbours.count(pkt) == 0)) return false;
@@ -225,7 +225,7 @@ class Pm3App : public RoutingProtocolBase {
     bool creatingControlPacket(Node x, int des, PktId pkt, Data data);
     bool start_tx(Node x, PktId pkt);
     bool send_down(Node x, PktId pkt);
-    bool send_up(Node x, PktId pkt, int nbrs);
+    bool send_up(Node x, PktId pkt, const std::set<Node>& nbrs);
     bool receive(Node nb, PktId pkt);
     bool clear_recvdBuff(Node nb, PktId pkt);
     bool fwdr_receive_pkt(Node nb, PktId pkt);
@@ -315,7 +315,7 @@ bool Pm3App::send_down(Node x, PktId pkt) {
     return sentDown.count({x, pkt}) > 0;
 }
 
-bool Pm3App::send_up(Node x, PktId pkt, int nbrs) {
+bool Pm3App::send_up(Node x, PktId pkt, const std::set<Node>& nbrs) {
     if (!(sentUp.count({x, pkt}) == 0)) return false;
     if (!(sentDown.count({x, pkt}) > 0)) return false;
     if (!(ctlNeighbours.count(pkt) == 0)) return false;
@@ -439,7 +439,7 @@ class Um2App : public RoutingProtocolBase {
     bool creatingControlPacket(Node x, int des, PktId pkt, Data data);
     bool start_tx(Node x, PktId pkt);
     bool send_down(Node x, PktId pkt);
-    bool send_up(Node x, PktId pkt, int nbrs);
+    bool send_up(Node x, PktId pkt, const std::set<Node>& nbrs);
     bool receive(Node nb, PktId pkt);
     bool clear_recvdBuff(Node nb, PktId pkt);
     bool fwdr_receive_pkt(Node nb, PktId pkt);
@@ -501,7 +501,7 @@ bool Um2App::send_down(Node x, PktId pkt) {
     return sentDown.count({x, pkt}) > 0;
 }
 
-bool Um2App::send_up(Node x, PktId pkt, int nbrs) {
+bool Um2App::send_up(Node x, PktId pkt, const std::set<Node>& nbrs) {
     if (!(sentUp.count({x, pkt}) == 0)) return false;
     if (!(sentDown.count({x, pkt}) > 0)) return false;
     if (!(ctlNeighbours.count(pkt) == 0)) return false;

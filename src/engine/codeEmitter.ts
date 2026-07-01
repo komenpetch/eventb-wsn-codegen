@@ -37,7 +37,8 @@ function cppType(form: EncodingForm, inv: string | undefined): string {
 function params(ev: { parameters: string[]; guards: string[] }): string {
   const typeOf = (p: string): string => {
     for (const g of ev.guards) {
-      if (new RegExp(`\\b${p}\\s*∈\\s*ℙ\\(`).test(g)) return "const std::set<Node>&";
+      // Set-typed param: `p ∈ ℙ(ND)` or the set-builder `p ∈ {n∣ … ℙ(ND) …}`.
+      if (new RegExp(`\\b${p}\\s*∈\\s*(?:ℙ\\(|\\{[^}]*ℙ\\()`).test(g)) return "const std::set<Node>&";
       const m = new RegExp(`\\b${p}\\s*∈\\s*(\\w+|ℤ)`).exec(g);
       if (m) return alias(m[1]);
     }
