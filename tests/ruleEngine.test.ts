@@ -28,6 +28,18 @@ describe("translateEvent", () => {
     ]);
   });
 
+  it("reports unmatched clauses as untranslated instead of dropping them", () => {
+    const t = translateEvent(
+      { label: "synthetic", parameters: ["x"],
+        guards: ["sentUp ∩ sentDown = ∅"],           // no ∩ rule exists
+        actions: ["sentUp ≔ sentUp ∪ sentDown"] },   // no whole-set-union rule
+      enc,
+    );
+    expect(t.guards).toEqual([]);
+    expect(t.untranslatedGuards).toEqual(["sentUp ∩ sentDown = ∅"]);
+    expect(t.untranslatedActions).toEqual(["sentUp ≔ sentUp ∪ sentDown"]);
+  });
+
   it("recognizes ℤ/𝔹/BOOL typing predicates (built-in carriers outside \\w)", () => {
     const none = new Set<string>();
     expect(isTypingPredicate("data ∈ ℤ", none)).toBe(true);

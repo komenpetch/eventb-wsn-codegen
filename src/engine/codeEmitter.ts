@@ -60,13 +60,20 @@ export function emit(model: EncodedMachine, name: string): GeneratedTree {
     const t = translateEvent(raw, model);
     const sig = `bool ${t.label}(${params(raw)})`;
     decls.push(`    ${sig};`);
-    if (t.actions.length === 0) {
+    // Untranslated clauses stay visible: omitting a guard silently weakens
+    // the precondition, omitting an action silently weakens the effect.
+    const noteG = t.untranslatedGuards.map((g) => `    // UNTRANSLATED GUARD: ${g}`);
+    const noteA = t.untranslatedActions.map((a) => `    // UNTRANSLATED ACTION: ${a}`);
+    if (t.actions.length === 0 && noteA.length === 0) {
       const pred = t.guards.length ? t.guards.join(" && ") : "true";
-      defs.push(`bool ${name}::${t.label}(${params(raw)}) {\n    return ${pred};\n}`);
+      const body = [...noteG, `    return ${pred};`].join("\n");
+      defs.push(`bool ${name}::${t.label}(${params(raw)}) {\n${body}\n}`);
     } else {
       const body = [
         ...t.guards.map((g) => `    if (!(${g})) return false;`),
+        ...noteG,
         ...t.actions.map((a) => `    ${a}`),
+        ...noteA,
         "    return true;",
       ].join("\n");
       defs.push(`bool ${name}::${t.label}(${params(raw)}) {\n${body}\n}`);
@@ -74,8 +81,12 @@ export function emit(model: EncodedMachine, name: string): GeneratedTree {
   }
 
   const init = model.events.find((e) => e.label === "INITIALISATION");
-  const ctorBody = init
-    ? translateEvent(init, model).actions.map((a) => `    ${a}`).join("\n")
+  const tInit = init ? translateEvent(init, model) : undefined;
+  const ctorBody = tInit
+    ? [
+        ...tInit.actions.map((a) => `    ${a}`),
+        ...tInit.untranslatedActions.map((a) => `    // UNTRANSLATED ACTION: ${a}`),
+      ].join("\n")
     : "";
 
   const header = `#pragma once

@@ -31,7 +31,17 @@ function matchWhole(expr: string, enc: (id: string) => EncodingForm | undefined)
   return null;
 }
 
-export interface TranslatedEvent { label: string; parameters: string[]; guards: string[]; actions: string[]; }
+export interface TranslatedEvent {
+  label: string;
+  parameters: string[];
+  guards: string[];
+  actions: string[];
+  // Clauses no rule matched (typing guards excluded). The emitter surfaces
+  // them as // UNTRANSLATED comments — a dropped guard would silently weaken
+  // the event's precondition, a dropped action its effect.
+  untranslatedGuards: string[];
+  untranslatedActions: string[];
+}
 
 export function translateEvent(ev: FlatEvent, model: EncodedMachine): TranslatedEvent {
   const enc = (id: string) => model.encodings.get(id);
@@ -43,14 +53,21 @@ export function translateEvent(ev: FlatEvent, model: EncodedMachine): Translated
       if (!model.variables.includes(tok)) nonVars.add(tok);
 
   const guards: string[] = [];
+  const untranslatedGuards: string[] = [];
   for (const g of ev.guards)
     for (const clause of splitConjuncts(g)) {
       if (isTypingPredicate(clause, nonVars)) continue;
       const cpp = matchWhole(clause, enc);
       if (cpp) guards.push(cpp);
+      else untranslatedGuards.push(clause);
     }
   const actions: string[] = [];
-  for (const a of ev.actions) { const cpp = matchWhole(a.trim(), enc); if (cpp) actions.push(cpp); }
+  const untranslatedActions: string[] = [];
+  for (const a of ev.actions) {
+    const cpp = matchWhole(a.trim(), enc);
+    if (cpp) actions.push(cpp);
+    else untranslatedActions.push(a.trim());
+  }
 
-  return { label: ev.label, parameters: ev.parameters, guards, actions };
+  return { label: ev.label, parameters: ev.parameters, guards, actions, untranslatedGuards, untranslatedActions };
 }
