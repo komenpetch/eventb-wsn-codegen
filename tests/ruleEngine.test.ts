@@ -28,6 +28,17 @@ describe("translateEvent", () => {
     ]);
   });
 
+  it("keeps membership in a set-typed PARAMETER as a semantic guard (not typing)", () => {
+    // RTMCS/MintRoute assign_forwarder: `nb ∈ nbs` with nbs an event parameter.
+    const t = translateEvent(
+      { label: "assign_forwarder", parameters: ["nb", "nbs"],
+        guards: ["nb ∈ ND", "nb ∈ nbs"], actions: [] },
+      enc,
+    );
+    expect(t.guards).toEqual(["nbs.count(nb) > 0"]);   // nb ∈ ND dropped (typing), nb ∈ nbs kept
+    expect(t.untranslatedGuards).toEqual([]);
+  });
+
   it("reports unmatched clauses as untranslated instead of dropping them", () => {
     const t = translateEvent(
       { label: "synthetic", parameters: ["x"],

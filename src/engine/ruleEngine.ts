@@ -45,12 +45,17 @@ export interface TranslatedEvent {
 
 export function translateEvent(ev: FlatEvent, model: EncodedMachine): TranslatedEvent {
   const enc = (id: string) => model.encodings.get(id);
-  // Machine-only: any identifier that is not a machine variable is a context
-  // name (ND, Dests, type, …) for the purpose of typing-guard detection.
+  // Machine-only: any identifier that is neither a machine variable nor an
+  // event parameter is a context name (ND, Dests, type, …) for typing-guard
+  // detection. Parameters must NOT count as types: `x ∈ nbrs` with nbrs a
+  // set-typed parameter is a semantic guard (SET1), not a typing predicate —
+  // treating it as typing would drop it silently (RTMCS/MintRoute
+  // assign_forwarder's `nb ∈ nbs` is a real instance).
+  const params = new Set(ev.parameters);
   const nonVars = new Set<string>();
   for (const t of [...ev.guards, ...ev.actions])
     for (const tok of t.match(/[A-Za-z_]\w*/g) ?? [])
-      if (!model.variables.includes(tok)) nonVars.add(tok);
+      if (!model.variables.includes(tok) && !params.has(tok)) nonVars.add(tok);
 
   const guards: string[] = [];
   const untranslatedGuards: string[] = [];
