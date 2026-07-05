@@ -58,7 +58,13 @@ export function flatten(model: RawModel, target: string): FlatMachine {
       if (variables.includes(id)) variableTypes.set(id, inv.text);
     }
 
-  return { name: target, variables, variableTypes, events: [...acc.values()] };
+  return {
+    name: target,
+    chain: machines.map((m) => m.name),
+    variables,
+    variableTypes,
+    events: [...acc.values()],
+  };
 }
 
 function dedupe<T>(xs: T[]): T[] { return [...new Set(xs)]; }

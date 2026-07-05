@@ -34,6 +34,7 @@ export interface FlatEvent {
 }
 export interface FlatMachine {
   name: string;                       // target machine label, e.g. "pM1"
+  chain: string[];                    // machine labels base → target, e.g. ["pM1","uM2","pM3"]
   variables: string[];                // union across the refines chain
   variableTypes: Map<string, string>; // identifier → invariant predicate (raw Unicode)
   events: FlatEvent[];                // every event fully flattened
