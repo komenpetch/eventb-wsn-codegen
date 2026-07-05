@@ -23,6 +23,11 @@ describe("pipeline.machineNames / leafMachine / defaultName", () => {
   it("lists every machine in the project (name-agnostic)", () => {
     expect(machineNames(all())).toEqual(["pM1", "uM2", "pM3"]);
   });
+  it("lists machines in refinement order (base → leaf), not file order", () => {
+    // Alphabetical/directory order is pM1, pM3, uM2 — the chain is pM1→uM2→pM3.
+    expect(machineNames([load("pM3"), load("pM1"), load("uM2")]))
+      .toEqual(["pM1", "uM2", "pM3"]);
+  });
   it("finds the most-refined (leaf) machine regardless of file order", () => {
     expect(leafMachine(all())).toBe("pM3");
     expect(leafMachine([load("pM3"), load("pM1"), load("uM2")])).toBe("pM3");

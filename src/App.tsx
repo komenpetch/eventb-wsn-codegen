@@ -22,11 +22,22 @@ export default function App() {
     setBusy(true);
     try {
       const f = await read();
-      const names = machineNames(f);
+      const names = f.length ? machineNames(f) : [];
       setFiles(f);
       setMachines(names);
       setOutputName(names.length ? defaultName(leafMachine(f)) : "");
-      append(`Loaded ${f.length} file(s); machines: ${names.join(", ") || "(none found)"}.`);
+      if (names.length) {
+        append(`Loaded ${f.length} file(s); machines (base → leaf): ${names.join(" → ")}.`);
+      } else if (f.length) {
+        append(`Loaded ${f.length} file(s) but none is an Event-B machine (.bum).`);
+      } else {
+        // Folder picking is not recursive: the picked folder itself must hold
+        // the .bum files (a Rodin project folder is flat).
+        append(
+          "No .bum/.buc files found. Pick the Rodin project folder itself " +
+          "(the one that directly contains the .bum files), or load a .zip of it.",
+        );
+      }
     } catch (e) {
       // A cancelled picker rejects with AbortError — a normal user choice.
       if ((e as Error).name === "AbortError") append("Cancelled.");

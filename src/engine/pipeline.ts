@@ -22,11 +22,11 @@ function parsedMachines(files: EbFiles): RawModel {
   return raw;
 }
 
-// The most-refined machine — the leaf of the deepest refines chain. Flattening
-// it yields the merged model: all ancestors' state + events in one class.
-function leafOf(raw: RawModel): string {
+// Refinement depth of each machine (1 = base). Shared by leaf detection and
+// chain-ordered listing.
+function depthFn(raw: RawModel): (name: string) => number {
   const byName = new Map(raw.machines.map((m) => [m.name, m]));
-  const depth = (name: string): number => {
+  return (name: string): number => {
     let d = 0;
     const seen = new Set<string>();
     let cur = byName.get(name);
@@ -39,14 +39,23 @@ function leafOf(raw: RawModel): string {
     }
     return d;
   };
+}
+
+// The most-refined machine — the leaf of the deepest refines chain. Flattening
+// it yields the merged model: all ancestors' state + events in one class.
+function leafOf(raw: RawModel): string {
+  const depth = depthFn(raw);
   // Deepest chain wins; ties fall back to parse order (stable sort).
   return raw.machines.map((m) => m.name).sort((a, b) => depth(b) - depth(a))[0];
 }
 
-// The machine labels in the project, in parsed (file) order. Name-agnostic —
-// any refinement chain (pM1/uM2/pM3/uM4/pM5/…) is supported.
+// The machine labels in the project, ordered base → leaf along the refines
+// chain (file order breaks ties), so displays like "pM1 → uM2 → pM3" reflect
+// refinement, not directory listing. Name-agnostic — any chain works.
 export function machineNames(files: EbFiles): string[] {
-  return parseModel(files).machines.map((m) => m.name);
+  const raw = parseModel(files);
+  const depth = depthFn(raw);
+  return raw.machines.map((m) => m.name).sort((a, b) => depth(a) - depth(b));
 }
 
 // The machine the project merges into (the most-refined / leaf machine).
