@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<org.eventb.core.contextFile org.eventb.core.configuration="org.eventb.core.fwd;org.eventb.codegen.ui.cgConfig" org.eventb.texttools.text_lastmodified="1433264087004" org.eventb.texttools.text_representation="context cM2 extends cM1&#10;constants DATA CONTROL CTL_VAL type&#10;sets TYPE&#10;&#10;axioms&#10;  @axm2_1 DATA ∈ TYPE&#10;  @axm2_2 CONTROL ⊆ TYPE&#10;  @axm2_3 partition(TYPE, CONTROL, {DATA})&#10;  @axm2_4 type ∈ PKT → TYPE&#10;  @axm2_5 CTL_VAL = 0&#10;end&#10;" version="3">
+<org.eventb.core.extendsContext name="'" org.eventb.core.target="cM1"/>
+<org.eventb.core.carrierSet name="_sYBnAAk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="TYPE"/>
+<org.eventb.core.constant name="_sYBnAQk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="DATA"/>
+<org.eventb.core.constant name="_sYBnAgk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="CONTROL"/>
+<org.eventb.core.constant name="_sYBnAwk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="CTL_VAL"/>
+<org.eventb.core.constant name="_sYBnBAk_EeWZ6ayKi1-Bfw" org.eventb.core.identifier="type"/>
+<org.eventb.core.axiom name="_sYBnBQk_EeWZ6ayKi1-Bfw" org.eventb.core.label="axm2_1" org.eventb.core.predicate="DATA ∈ TYPE"/>
+<org.eventb.core.axiom name="_sYBnBgk_EeWZ6ayKi1-Bfw" org.eventb.core.label="axm2_2" org.eventb.core.predicate="CONTROL ⊆ TYPE"/>
+<org.eventb.core.axiom name="_sYBnBwk_EeWZ6ayKi1-Bfw" org.eventb.core.label="axm2_3" org.eventb.core.predicate="partition(TYPE, CONTROL, {DATA})"/>
+<org.eventb.core.axiom name="_sYBnCAk_EeWZ6ayKi1-Bfw" org.eventb.core.label="axm2_4" org.eventb.core.predicate="type ∈ PKT → TYPE"/>
+<org.eventb.core.axiom name="_sYBnCQk_EeWZ6ayKi1-Bfw" org.eventb.core.label="axm2_5" org.eventb.core.predicate="CTL_VAL = 0"/>
+</org.eventb.core.contextFile>

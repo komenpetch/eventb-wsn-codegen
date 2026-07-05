@@ -28,3 +28,6 @@ dist-ssr
 
 # Compile-gate scratch output (Task 10 scripts/generate.ts; probe artifacts).
 /out/
+
+# Local diagnostic probes (never published).
+scripts/_*.ts
