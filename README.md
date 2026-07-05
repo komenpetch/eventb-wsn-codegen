@@ -103,7 +103,7 @@ src/engine/     six-stage pipeline: parser → flattener → encodingResolver �
                 rules → ruleEngine → codeEmitter (pipeline.ts wires them)
 src/assets/     eb_helpers.h + eb_context.h (shared C++ headers, copied into output)
 src/io/         folder read + folder/zip write (File System Access + fallbacks)
-src/App.tsx     thin UI shell (target-machine + output-name)
+src/App.tsx     thin UI shell (machine list + output-name; merges the whole chain)
 scripts/        headless generate CLI + compile-gate.md
 tests/          vitest suite + fixtures/shdecom + generation snapshots
 docs/           OMNeT++/INET integration guide
