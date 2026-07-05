@@ -39,7 +39,14 @@ describe("codeEmitter", () => {
     const cc = file("cc");
     expect(cc).toMatch(/bool Pm1App::send_down\([^)]*\)\s*\{\s*return [^;]+;\s*\}/);
   });
-  it("emits the .ned extending RoutingProtocolBase", () => {
-    expect(file("ned")).toContain("simple Pm1App extends RoutingProtocolBase");
+  it("emits a NED-resolvable module: standalone simple like IApp, class bound via @class", () => {
+    const ned = file("ned");
+    // RoutingProtocolBase has no NED type in INET 4.5 — extending it would
+    // fail NED resolution; the C++ base is bound with @class instead.
+    expect(ned).not.toContain("extends RoutingProtocolBase");
+    expect(ned).toContain("simple Pm1App like IApp");
+    expect(ned).toContain("@class(Pm1App)");
+    expect(ned).toContain("input socketIn");
+    expect(ned).toContain("output socketOut");
   });
 });

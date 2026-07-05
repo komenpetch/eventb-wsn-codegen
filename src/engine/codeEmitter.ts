@@ -129,17 +129,25 @@ ${ctorBody}
 ${defs.join("\n\n")}
 `;
 
-  const ned = `import inet.routing.base.RoutingProtocolBase;
+  // RoutingProtocolBase is a C++-only base (no NED type in INET 4.5), so the
+  // module is declared standalone and bound to the class via @class — the
+  // same shape as INET's own routing apps (inet/routing/rip/Rip.ned).
+  const ned = `import inet.applications.contract.IApp;
 
 //
 // Generated application-layer module from the WSN pattern machine ${model.name}.
-// Network-layer wiring (handleUpper/LowerPacket bodies) is the next step.
+// C++ base class: inet::RoutingProtocolBase (a routing app over UDP).
+// Network-layer wiring (the handleMessageWhenUp body) is the next step.
 //
-simple ${name} extends RoutingProtocolBase
+simple ${name} like IApp
 {
     parameters:
         @class(${name});
         @display("i=block/app");
+        @lifecycleSupport;
+    gates:
+        input socketIn @labels(UdpControlInfo/up);
+        output socketOut @labels(UdpControlInfo/down);
 }
 `;
 

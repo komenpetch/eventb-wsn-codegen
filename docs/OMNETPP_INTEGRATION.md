@@ -6,7 +6,7 @@ most-refined machine, flattened) and emits three files:
 | File | Role |
 |---|---|
 | `<Name>.h` / `<Name>.cc` | INET 4.5 `inet::RoutingProtocolBase` subclass (a routing app over UDP); one guarded `bool` method per Event-B event |
-| `<Name>.ned` | `simple <Name> extends RoutingProtocolBase` module definition |
+| `<Name>.ned` | standalone `simple <Name> like IApp` module bound to the class via `@class` (RoutingProtocolBase has no NED type in INET 4.5) |
 
 plus the two shared headers the generated code `#include`s: `eb_helpers.h` (pair-set
 `inDom`/`inRan`) and `eb_context.h` (element aliases + context constants). Regenerate any

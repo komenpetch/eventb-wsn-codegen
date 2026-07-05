@@ -167,17 +167,22 @@ bool Pm1App::final_tx_pkt(PktId pkt) {
     "path": "Pm1App.cc",
   },
   {
-    "content": "import inet.routing.base.RoutingProtocolBase;
+    "content": "import inet.applications.contract.IApp;
 
 //
 // Generated application-layer module from the WSN pattern machine pM1.
-// Network-layer wiring (handleUpper/LowerPacket bodies) is the next step.
+// C++ base class: inet::RoutingProtocolBase (a routing app over UDP).
+// Network-layer wiring (the handleMessageWhenUp body) is the next step.
 //
-simple Pm1App extends RoutingProtocolBase
+simple Pm1App like IApp
 {
     parameters:
         @class(Pm1App);
         @display("i=block/app");
+        @lifecycleSupport;
+    gates:
+        input socketIn @labels(UdpControlInfo/up);
+        output socketOut @labels(UdpControlInfo/down);
 }
 ",
     "path": "Pm1App.ned",
@@ -387,17 +392,22 @@ bool Pm3App::final_tx_pkt(PktId pkt) {
     "path": "Pm3App.cc",
   },
   {
-    "content": "import inet.routing.base.RoutingProtocolBase;
+    "content": "import inet.applications.contract.IApp;
 
 //
 // Generated application-layer module from the WSN pattern machine pM3.
-// Network-layer wiring (handleUpper/LowerPacket bodies) is the next step.
+// C++ base class: inet::RoutingProtocolBase (a routing app over UDP).
+// Network-layer wiring (the handleMessageWhenUp body) is the next step.
 //
-simple Pm3App extends RoutingProtocolBase
+simple Pm3App like IApp
 {
     parameters:
         @class(Pm3App);
         @display("i=block/app");
+        @lifecycleSupport;
+    gates:
+        input socketIn @labels(UdpControlInfo/up);
+        output socketOut @labels(UdpControlInfo/down);
 }
 ",
     "path": "Pm3App.ned",
@@ -590,17 +600,22 @@ bool Um2App::creatingDataPacket(Node x, int des, PktId pkt, Data data) {
     "path": "Um2App.cc",
   },
   {
-    "content": "import inet.routing.base.RoutingProtocolBase;
+    "content": "import inet.applications.contract.IApp;
 
 //
 // Generated application-layer module from the WSN pattern machine uM2.
-// Network-layer wiring (handleUpper/LowerPacket bodies) is the next step.
+// C++ base class: inet::RoutingProtocolBase (a routing app over UDP).
+// Network-layer wiring (the handleMessageWhenUp body) is the next step.
 //
-simple Um2App extends RoutingProtocolBase
+simple Um2App like IApp
 {
     parameters:
         @class(Um2App);
         @display("i=block/app");
+        @lifecycleSupport;
+    gates:
+        input socketIn @labels(UdpControlInfo/up);
+        output socketOut @labels(UdpControlInfo/down);
 }
 ",
     "path": "Um2App.ned",

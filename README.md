@@ -71,7 +71,7 @@ single measurable success criterion (Form 01 §6). The exact toolchain paths and
 | File | Role |
 |---|---|
 | `<Name>.h` / `<Name>.cc` | INET 4.5 `RoutingProtocolBase` subclass; one guarded `bool` method per Event-B event |
-| `<Name>.ned` | `simple <Name> extends RoutingProtocolBase` module definition |
+| `<Name>.ned` | standalone `simple <Name> like IApp` module bound to the class via `@class` (RoutingProtocolBase has no NED type) |
 
 The generated class carries the four `OperationalBase` overrides (`handleMessageWhenUp`,
 `handleStartOperation`, `handleStopOperation`, `handleCrashOperation`) as empty stubs, a public
