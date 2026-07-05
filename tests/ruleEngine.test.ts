@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { parseModel } from "../src/engine/parser";
 import { flatten } from "../src/engine/flattener";
 import { resolveEncodings } from "../src/engine/encodingResolver";
-import { translateEvent } from "../src/engine/ruleEngine";
+import { translateEvent, isTypingPredicate } from "../src/engine/ruleEngine";
 
 const load = (n: string) =>
   ({ name: `${n}.bum`, xml: readFileSync(`tests/fixtures/shdecom/${n}.bum`, "utf8") });
@@ -26,6 +26,14 @@ describe("translateEvent", () => {
       "sentDown.erase({x, pkt});",
       "sentUp.insert({x, pkt});",
     ]);
+  });
+
+  it("recognizes ℤ/𝔹/BOOL typing predicates (built-in carriers outside \\w)", () => {
+    const none = new Set<string>();
+    expect(isTypingPredicate("data ∈ ℤ", none)).toBe(true);
+    expect(isTypingPredicate("sf ∈BOOL", none)).toBe(true);
+    expect(isTypingPredicate("cnt ∈ ℕ", none)).toBe(true);
+    expect(isTypingPredicate("x ∈ ND ∖Dests", none)).toBe(false);   // CMP1, kept
   });
 
   it("flags an action-less event as a predicate (send_down)", () => {

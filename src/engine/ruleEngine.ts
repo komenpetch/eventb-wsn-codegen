@@ -18,7 +18,8 @@ const BUILTIN_TYPES = new Set(["ℕ", "ℕ1", "ℤ", "BOOL", "𝔹", "PKT", "ND"
 export function isTypingPredicate(expr: string, nonVars: Set<string>): boolean {
   const isType = (s: string) => nonVars.has(s) || BUILTIN_TYPES.has(s);
   // x ∈ T / x ⊆ T (bare RHS) — but NOT x ∈ A ∖ B (CMP1), whose RHS contains ∖.
-  const m = /^\w+\s*[∈⊆]\s*(\w+)$/.exec(expr);
+  // \S+ (not \w+): the built-in carriers ℤ / ℕ / 𝔹 are outside \w.
+  const m = /^\w+\s*[∈⊆]\s*(\S+)$/.exec(expr);
   if (m && isType(m[1])) return true;
   // nbrs ∈ {n∣ n ∈ ℙ(ND)} — set-builder typing, drop.
   if (/^\w+\s*∈\s*\{.*∣.*\}$/.test(expr)) return true;
