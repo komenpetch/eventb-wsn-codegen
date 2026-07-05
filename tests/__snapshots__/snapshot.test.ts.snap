@@ -89,6 +89,7 @@ bool Pm1App::start_tx(Node x, PktId pkt) {
     if (!(pktFwdr.count(pkt) > 0)) return false;
     if (!(ndBuff.count({x, pkt}) > 0)) return false;
     sentDown.insert({x, pkt});
+    pktFwdr[pkt] = x;
     ndBuff.erase({x, pkt});
     return true;
 }
@@ -307,6 +308,7 @@ bool Pm3App::start_tx(Node x, PktId pkt) {
     if (!(pktFwdr.count(pkt) > 0)) return false;
     if (!(ndBuff.count({x, pkt}) > 0)) return false;
     sentDown.insert({x, pkt});
+    pktFwdr[pkt] = x;
     ndBuff.erase({x, pkt});
     return true;
 }
@@ -493,6 +495,7 @@ bool Um2App::start_tx(Node x, PktId pkt) {
     if (!(pktFwdr.count(pkt) > 0)) return false;
     if (!(ndBuff.count({x, pkt}) > 0)) return false;
     sentDown.insert({x, pkt});
+    pktFwdr[pkt] = x;
     ndBuff.erase({x, pkt});
     return true;
 }

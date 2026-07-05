@@ -46,8 +46,11 @@ export const RULES: Rule[] = [
   { id: "FN3-app", match: re(/^(?<f>\w+)\(\s*(?<k>\w+)\s*\)\s*≔\s*(?<v>\w+)$/),
     emit: (m) => { const { f, k, v } = c(m); return `${f}[${k}] = ${v};`; } },
 
-  // ── override with MISSING glyph: f ≔ f {k↦v}  (and the proper ⊴ form) ──
-  { id: "FN3-override", match: re(/^(?<f>\w+)\s*≔\s*\k<f>\s*(?:⊴\s*)?\{\s*(?<k>\w+)\s*↦\s*(?<v>\w+)\s*\}$/),
+  // ── FN3 relational override: f ≔ f  {k↦v}. Rodin stores the override
+  // operator as the private-use codepoint U+E103 (it renders as tofu/nothing
+  // outside Rodin, so it may also survive as a bare space in copied text);
+  // ⊴ is tolerated as a legacy spelling. ──
+  { id: "FN3-override", match: re(/^(?<f>\w+)\s*≔\s*\k<f>\s*(?:[⊴]\s*)?\{\s*(?<k>\w+)\s*↦\s*(?<v>\w+)\s*\}$/),
     emit: (m) => { const { f, k, v } = c(m); return `${f}[${k}] = ${v};`; } },
 
   // ── ∪ {a↦b}: pair-set insert (PS2) OR function-extend (FN3), by enc ──

@@ -58,8 +58,11 @@ describe("38-rule catalog", () => {
     expect(emit("nb ∉ Dests", buffers)).toBe("Dests.count(nb) == 0");
     expect(emit("nbrs ≠ ∅", buffers)).toBe("!nbrs.empty()");
   });
-  it("FN3 set-update, override-glyph-missing form, CMP2 total init, clear", () => {
+  it("FN3 set-update, relational override (U+E103 glyph and space-degraded), CMP2 total init, clear", () => {
     expect(emit("ctlSensedFlg(x) ≔ sf", buffers)).toBe("ctlSensedFlg[x] = sf;");
+    // Real Rodin text: the override operator is private-use U+E103 (as in
+    // tests/fixtures/shdecom/pM1.bum start_tx) — and the space-degraded copy.
+    expect(emit("pktFwdr ≔pktFwdr  {pkt↦x}", buffers)).toBe("pktFwdr[pkt] = x;");
     expect(emit("pktFwdr ≔pktFwdr  {pkt↦x}", buffers)).toBe("pktFwdr[pkt] = x;");
     expect(emit("ctlSensedFlg ≔ (ND ∖Dests) × {FALSE}", buffers))
       .toBe("for (int _n : ND) if (Dests.count(_n) == 0) ctlSensedFlg[_n] = FALSE;");
