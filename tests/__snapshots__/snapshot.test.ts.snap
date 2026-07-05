@@ -295,6 +295,7 @@ bool Pm3App::creatingControlPacket(Node x, int des, PktId pkt, Data data) {
     if (!(pktData.count(pkt) == 0)) return false;
     if (!(ndBuff.count({x, pkt}) == 0)) return false;
     if (!(data == CTL_VAL)) return false;
+    if (!(CONTROL.count(type.at(pkt)) > 0)) return false;
     createdPkts.insert(pkt);
     pktFwdr[pkt] = x;
     pktData[pkt] = data;
@@ -482,6 +483,7 @@ bool Um2App::creatingControlPacket(Node x, int des, PktId pkt, Data data) {
     if (!(pktData.count(pkt) == 0)) return false;
     if (!(ndBuff.count({x, pkt}) == 0)) return false;
     if (!(data == CTL_VAL)) return false;
+    if (!(CONTROL.count(type.at(pkt)) > 0)) return false;
     createdPkts.insert(pkt);
     pktFwdr[pkt] = x;
     pktData[pkt] = data;

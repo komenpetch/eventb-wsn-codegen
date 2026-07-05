@@ -51,6 +51,14 @@ describe("38-rule catalog", () => {
     expect(emit("pkt ∉ dom(pktFwdr)", buffers)).toBe("pktFwdr.count(pkt) == 0");
     expect(emit("x ∈ ND ∖Dests", buffers)).toBe("(ND.count(x) > 0 && Dests.count(x) == 0)");
   });
+  it("FN1∘SET1 membership of a function application (type(pkt) ∈ CONTROL)", () => {
+    expect(emit("type(pkt) ∈ CONTROL", buffers)).toBe("CONTROL.count(type.at(pkt)) > 0");
+    expect(emit("type(pkt) ∉ CONTROL", buffers)).toBe("CONTROL.count(type.at(pkt)) == 0");
+  });
+  it("∪ {a↦b} dispatches per encoding: map-of-sets per-key insert", () => {
+    expect(emit("ctlNeighbours ≔ ctlNeighbours ∪ {pkt ↦ nb}", buffers))
+      .toBe("ctlNeighbours[pkt].insert(nb);");
+  });
   it("FN1 application equality, function-value equality, bare set membership, emptiness", () => {
     expect(emit("x = initialSrcAddr(pkt)", buffers)).toBe("x == initialSrcAddr.at(pkt)");
     expect(emit("ctlSensedFlg(x) = FALSE", buffers)).toBe("ctlSensedFlg.at(x) == FALSE");

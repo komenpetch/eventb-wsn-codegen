@@ -53,10 +53,13 @@ export const RULES: Rule[] = [
   { id: "FN3-override", match: re(/^(?<f>\w+)\s*≔\s*\k<f>\s*(?:[⊴]\s*)?\{\s*(?<k>\w+)\s*↦\s*(?<v>\w+)\s*\}$/),
     emit: (m) => { const { f, k, v } = c(m); return `${f}[${k}] = ${v};`; } },
 
-  // ── ∪ {a↦b}: pair-set insert (PS2) OR function-extend (FN3), by enc ──
+  // ── ∪ {a↦b}: pair-set insert (PS2), function-extend (FN3), or map-of-sets
+  //    per-key insert (MS2's pair spelling) — dispatched by enc ──
   { id: "UNION-pair", match: re(/^(?<R>\w+)\s*≔\s*\k<R>\s*∪\s*\{\s*(?<a>\w+)\s*↦\s*(?<b>\w+)\s*\}$/),
     emit: (m, enc) => { const { R, a, b } = c(m);
-      return enc(R) === "function" ? `${R}[${a}] = ${b};` : `${R}.insert({${a}, ${b}});`; } },
+      if (enc(R) === "function") return `${R}[${a}] = ${b};`;
+      if (enc(R) === "map-of-sets") return `${R}[${a}].insert(${b});`;
+      return `${R}.insert({${a}, ${b}});`; } },
 
   // ── ∖ {a↦b}: pair-set erase (PS3) OR map-of-sets per-key remove (MS3), by enc ──
   { id: "DIFF-pair", match: re(/^(?<R>\w+)\s*≔\s*\k<R>\s*∖\s*\{\s*(?<a>\w+)\s*↦\s*(?<b>\w+)\s*\}$/),
@@ -92,6 +95,12 @@ export const RULES: Rule[] = [
     emit: (m) => { const { x, op, M, k } = c(m);
       return op === "∈" ? `(${M}.count(${k}) > 0 && ${M}.at(${k}).count(${x}) > 0)`
                         : `(${M}.count(${k}) == 0 || ${M}.at(${k}).count(${x}) == 0)`; } },
+
+  // ── membership of a function application: f(k) ∈ S / ∉  (FN1 ∘ SET1),
+  //    e.g. type(pkt) ∈ CONTROL ──
+  { id: "FN1-SET1", match: re(/^(?<f>\w+)\(\s*(?<k>\w+)\s*\)\s*(?<op>∈|∉)\s*(?<S>\w+)$/),
+    emit: (m) => { const { f, k, op, S } = c(m);
+      return `${S}.count(${f}.at(${k})) ${op === "∈" ? "> 0" : "== 0"}`; } },
 
   // ── pair membership: a↦b ∈ R / ∉  (PS1) ──
   { id: "PS1", match: re(/^(?<a>\w+)\s*↦\s*(?<b>\w+)\s*(?<op>∈|∉)\s*(?<R>\w+)$/),
