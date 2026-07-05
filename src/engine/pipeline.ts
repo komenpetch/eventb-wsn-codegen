@@ -28,8 +28,15 @@ function leafOf(raw: RawModel): string {
   const byName = new Map(raw.machines.map((m) => [m.name, m]));
   const depth = (name: string): number => {
     let d = 0;
+    const seen = new Set<string>();
     let cur = byName.get(name);
-    while (cur) { d++; cur = cur.refines ? byName.get(cur.refines) : undefined; }
+    while (cur) {
+      if (seen.has(cur.name))
+        throw new Error(`Refinement cycle detected at machine '${cur.name}'.`);
+      seen.add(cur.name);
+      d++;
+      cur = cur.refines ? byName.get(cur.refines) : undefined;
+    }
     return d;
   };
   // Deepest chain wins; ties fall back to parse order (stable sort).
