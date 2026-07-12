@@ -106,20 +106,68 @@ Do not edit by hand — regenerate instead.`;
 #include <utility>
 #include "eb_helpers.h"
 #include "eb_context.h"
-#include "inet/routing/base/RoutingProtocolBase.h"
+#include "inet/applications/base/ApplicationBase.h"
+#include "inet/common/Protocol.h"
+#include "inet/common/lifecycle/LifecycleOperation.h"
+#include "inet/common/packet/Packet.h"
+#include "inet/networklayer/common/L3Address.h"
+#include "inet/networklayer/contract/INetworkSocket.h"
 
 using namespace inet;
 
-class ${name} : public RoutingProtocolBase {
+// Module shell modelled on INET's SensorApp (inet/applications/sensorapp):
+// a periodic timer drives sendDown() — the SensorApp::sendSensorPacket shape —
+// and packets the network layer sends up arrive through socketDataArrived()
+// into sendUp(). The Event-B state and guarded event methods plug into that
+// shell at the marked extension points.
+class ${name} : public ApplicationBase, public INetworkSocket::ICallback {
   protected:
+    // ── Event-B machine state ──
 ${fields}
 
-    // OperationalBase pure virtuals — empty stubs keep the module concrete.
-    // Message dispatch to the event methods below is integrator-supplied.
-    void handleMessageWhenUp(cMessage *msg) override { delete msg; }
-    void handleStartOperation(LifecycleOperation *op) override {}
-    void handleStopOperation(LifecycleOperation *op) override {}
-    void handleCrashOperation(LifecycleOperation *op) override {}
+    // ── SensorApp shell: parameters (read in initialize / openSocket) ──
+    L3Address sinkAddress;
+    cPar *sensingIntervalPar = nullptr;
+    int payloadLength = 0;
+    simtime_t startTime;
+    simtime_t stopTime;
+
+    // ── SensorApp shell: state ──
+    INetworkSocket *socket = nullptr;
+    cMessage *timer = nullptr;
+    long sendSeqNo = 0;
+    long sentCount = 0;
+    long receivedCount = 0;
+
+    // ── statistics ──
+    static simsignal_t packetSentSignal;
+    static simsignal_t packetReceivedSignal;
+
+  protected:
+    void initialize(int stage) override;
+    int numInitStages() const override { return NUM_INIT_STAGES; }
+    void handleMessageWhenUp(cMessage *msg) override;
+    void finish() override;
+    void refreshDisplay() const override;
+
+    // Packet flow, named after the Event-B CommPattern send-down / send-up
+    // flows and shaped like SensorApp: sendDown() builds one packet and hands
+    // it down to the network layer; sendUp() consumes one delivered packet.
+    virtual void openSocket();
+    virtual void sendDown();
+    virtual void sendUp(Packet *packet);
+    virtual void scheduleNextSensing(simtime_t previous);
+    virtual void cancelNextSensing();
+    virtual bool isEnabled();
+
+    // ApplicationBase lifecycle
+    void handleStartOperation(LifecycleOperation *operation) override;
+    void handleStopOperation(LifecycleOperation *operation) override;
+    void handleCrashOperation(LifecycleOperation *operation) override;
+
+    // INetworkSocket::ICallback
+    void socketDataArrived(INetworkSocket *socket, Packet *packet) override;
+    void socketClosed(INetworkSocket *socket) override;
 
     // Event-B events, one guarded bool method each: the guards are checked
     // first (early return), then the actions run.
@@ -127,40 +175,211 @@ ${decls.join("\n")}
 
   public:
     ${name}();
+    virtual ~${name}();
 };
 `;
 
   const source = `${cxxBanner}
 #include "${name}.h"
 
+#include "inet/common/ModuleAccess.h"
+#include "inet/common/Protocol.h"
+#include "inet/common/ProtocolTag_m.h"
+#include "inet/common/lifecycle/ModuleOperations.h"
+#include "inet/common/packet/chunk/ByteCountChunk.h"
+#include "inet/networklayer/common/L3AddressResolver.h"
+#include "inet/networklayer/common/L3AddressTag_m.h"
+#include "inet/networklayer/contract/L3Socket.h"
+
 Define_Module(${name});
 
+simsignal_t ${name}::packetSentSignal = registerSignal("packetSent");
+simsignal_t ${name}::packetReceivedSignal = registerSignal("packetReceived");
+
+// Event-B INITIALISATION.
 ${name}::${name}() {
 ${ctorBody}
+}
+
+${name}::~${name}() {
+    cancelAndDelete(timer);
+    delete socket;
+}
+
+void ${name}::initialize(int stage) {
+    ApplicationBase::initialize(stage);
+    if (stage == INITSTAGE_LOCAL) {
+        sensingIntervalPar = &par("sensingInterval");
+        payloadLength = par("payloadLength");
+        startTime = par("startTime");
+        stopTime = par("stopTime");
+        if (stopTime >= SIMTIME_ZERO && stopTime < startTime)
+            throw cRuntimeError("Invalid startTime/stopTime parameters");
+        timer = new cMessage("sensingTimer");
+    }
+}
+
+bool ${name}::isEnabled() {
+    // the module emits packets only when a destination is configured
+    return par("sinkAddress").stringValue()[0] != '\\0';
+}
+
+void ${name}::openSocket() {
+    // Resolve the sink lazily (it may stay empty on a passive sink-side node).
+    const char *sinkStr = par("sinkAddress");
+    if (sinkStr[0])
+        sinkAddress = L3AddressResolver().resolve(sinkStr);
+
+    // Bind an L3 socket over the configured network protocol; without one
+    // the module stays passive (no socket), as in SensorApp's passive mode.
+    const char *netProtoStr = par("networkProtocol");
+    if (!*netProtoStr) {
+        EV_INFO << "no networkProtocol parameter; not opening socket\\n";
+        return;
+    }
+    socket = new L3Socket(Protocol::getProtocol(netProtoStr), gate("socketOut"));
+    socket->bind(&Protocol::manet, L3Address());
+    socket->setCallback(this);
+}
+
+// Send-down flow (SensorApp::sendSensorPacket shape): build one packet and
+// hand it down to the network layer through the socket.
+void ${name}::sendDown() {
+    if (sinkAddress.isUnspecified() || socket == nullptr) {
+        EV_WARN << "sinkAddress unspecified, skipping send\\n";
+        return;
+    }
+
+    // EXTENSION POINT (send-down flow): guard/trigger the transmission with
+    // the generated Event-B event methods declared above.
+
+    char pktName[32];
+    snprintf(pktName, sizeof(pktName), "sensor-%ld", sendSeqNo);
+    Packet *packet = new Packet(pktName);
+    auto payload = makeShared<ByteCountChunk>(B(payloadLength));
+    packet->insertAtBack(payload);
+    packet->addTag<PacketProtocolTag>()->setProtocol(&Protocol::manet);
+    packet->addTag<L3AddressReq>()->setDestAddress(sinkAddress);
+
+    emit(packetSentSignal, packet);
+    socket->send(packet);
+    sendSeqNo++;
+    sentCount++;
+}
+
+// Send-up flow (SensorApp receive path): a packet the network layer sent up
+// arrives here via handleMessageWhenUp → socket → socketDataArrived.
+void ${name}::sendUp(Packet *packet) {
+    // EXTENSION POINT (send-up flow): dispatch to the generated Event-B
+    // receive-side event methods declared above.
+
+    EV_INFO << "received " << packet->getByteLength() << "B\\n";
+    receivedCount++;
+    emit(packetReceivedSignal, packet);
+    delete packet;
+}
+
+void ${name}::scheduleNextSensing(simtime_t previous) {
+    simtime_t next;
+    if (previous < SIMTIME_ZERO)
+        next = simTime() <= startTime ? startTime : simTime();
+    else
+        next = previous + *sensingIntervalPar;
+    if (stopTime < SIMTIME_ZERO || next < stopTime)
+        scheduleAt(next, timer);
+}
+
+void ${name}::cancelNextSensing() {
+    cancelEvent(timer);
+}
+
+void ${name}::handleMessageWhenUp(cMessage *msg) {
+    if (msg->isSelfMessage()) {
+        ASSERT(msg == timer);
+        sendDown();
+        scheduleNextSensing(simTime());
+    }
+    else if (socket && socket->belongsToSocket(msg)) {
+        socket->processMessage(msg);   // delivered to sendUp via socketDataArrived
+    }
+    else {
+        EV_WARN << "dropping unaccepted message " << msg->getName() << "\\n";
+        delete msg;
+    }
+}
+
+void ${name}::socketDataArrived(INetworkSocket *, Packet *packet) {
+    sendUp(packet);
+}
+
+void ${name}::socketClosed(INetworkSocket *) {}
+
+void ${name}::handleStartOperation(LifecycleOperation *) {
+    openSocket();
+    if (isEnabled() && !sinkAddress.isUnspecified())
+        scheduleNextSensing(-1);
+}
+
+void ${name}::handleStopOperation(LifecycleOperation *) {
+    cancelNextSensing();
+    if (socket && socket->isOpen())
+        socket->close();
+    delayActiveOperationFinish(par("stopOperationTimeout"));
+}
+
+void ${name}::handleCrashOperation(LifecycleOperation *operation) {
+    cancelNextSensing();
+    if (socket && operation->getRootModule() != getContainingNode(this))
+        socket->destroy();
+}
+
+void ${name}::refreshDisplay() const {
+    ApplicationBase::refreshDisplay();
+    char buf[48];
+    snprintf(buf, sizeof(buf), "sent: %ld\\nrcvd: %ld", sentCount, receivedCount);
+    getDisplayString().setTagArg("t", 0, buf);
+}
+
+void ${name}::finish() {
+    recordScalar("packets sent", sentCount);
+    recordScalar("packets received", receivedCount);
 }
 
 ${defs.join("\n\n")}
 `;
 
-  // RoutingProtocolBase is a C++-only base (no NED type in INET 4.5), so the
-  // module is declared standalone and bound to the class via @class — the
-  // same shape as INET's own routing apps (inet/routing/rip/Rip.ned).
+  // The module is declared standalone and bound to the C++ class via @class;
+  // parameters, signals, and gates mirror INET's SensorApp
+  // (inet/applications/sensorapp/SensorApp.ned).
   const ned = `import inet.applications.contract.IApp;
 
 //
 // ${name} — ${banner.split("\n").join("\n// ")}
-// The C++ class binds via @class below; its base inet::RoutingProtocolBase
-// has no NED type of its own in INET 4.5.
+// Shell modelled on INET's SensorApp: periodic sensing traffic toward
+// sinkAddress over the bound networkProtocol. The C++ class binds via
+// @class below.
 //
 simple ${name} like IApp
 {
     parameters:
         @class(${name});
+        string sinkAddress = default("");         // destination; empty = passive (sink-side) node
+        volatile double sensingInterval @unit(s) = default(1s);
+        int payloadLength @unit(B) = default(10B);
+        double startTime @unit(s) = default(uniform(0s, this.sensingInterval));
+        double stopTime @unit(s) = default(-1s);  // negative: run forever
+        string networkProtocol = default("");     // L3 protocol to bind; empty = no socket
+        double stopOperationExtraTime @unit(s) = default(-1s);
+        double stopOperationTimeout @unit(s) = default(2s);
         @display("i=block/app");
         @lifecycleSupport;
+        @signal[packetSent](type=inet::Packet);
+        @signal[packetReceived](type=inet::Packet);
+        @statistic[packetSent](title="packets sent"; source=packetSent; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);
+        @statistic[packetReceived](title="packets received"; source=packetReceived; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);
     gates:
-        input socketIn @labels(UdpControlInfo/up);
-        output socketOut @labels(UdpControlInfo/down);
+        input socketIn @labels(ITransportPacket/up);
+        output socketOut @labels(ITransportPacket/down);
 }
 `;
 

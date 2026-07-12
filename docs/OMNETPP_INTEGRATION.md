@@ -5,8 +5,8 @@ most-refined machine, flattened) and emits three files:
 
 | File | Role |
 |---|---|
-| `<Name>.h` / `<Name>.cc` | INET 4.5 `inet::RoutingProtocolBase` subclass (a routing app over UDP); one guarded `bool` method per Event-B event |
-| `<Name>.ned` | standalone `simple <Name> like IApp` module bound to the class via `@class` (RoutingProtocolBase has no NED type in INET 4.5) |
+| `<Name>.h` / `<Name>.cc` | INET 4.5 `inet::ApplicationBase` subclass shaped like INET's `SensorApp` (`inet/applications/sensorapp`); one guarded `bool` method per Event-B event |
+| `<Name>.ned` | standalone `simple <Name> like IApp` module bound to the class via `@class`, mirroring `SensorApp.ned`'s parameters, signals, and statistics |
 
 plus the two shared headers the generated code `#include`s: `eb_helpers.h` (pair-set
 `inDom`/`inRan`) and `eb_context.h` (element aliases + context constants). Regenerate any
@@ -17,12 +17,14 @@ npm run generate -- <inputDir> <outDir>    # every machine found → <outDir>
 npm run generate                           # tests/fixtures/shdecom → out/
 ```
 
-The class carries the four `OperationalBase` overrides (`handleMessageWhenUp`,
-`handleStartOperation`, `handleStopOperation`, `handleCrashOperation`) as empty stubs and a
-public constructor seeded from `INITIALISATION`. The **imperative message wiring** — the
-`handleMessageWhenUp` body that receives packets and calls the generated event methods — is the
-hand-completed next step; the generator produces the app-layer scaffold and the per-event guard/
-action logic, not the packet-dispatch decisions.
+The class is a working **SensorApp-shaped shell**: `handleMessageWhenUp` dispatches the sensing
+timer into `sendDown()` (the `SensorApp::sendSensorPacket` shape) and socket messages into
+`sendUp()` via `socketDataArrived`; the lifecycle handlers open/close an `L3Socket` bound to the
+`networkProtocol` NED parameter; the public constructor is seeded from `INITIALISATION`. The
+**hand-completed next step** is wiring the generated `bool` event methods into the two marked
+`EXTENSION POINT` comments (send-down flow in `sendDown()`, send-up flow in `sendUp()`); the
+generator produces the shell and the per-event guard/action logic, not the packet-dispatch
+decisions.
 
 ## Toolchain on this machine
 
@@ -53,10 +55,12 @@ export macros mis-expand). **Status: the merged module passes, exit 0.** See
 Executing in the simulator (the "and executes" half of Form 01 §6) requires two hand-authored
 pieces the app-layer generator does not emit:
 
-1. **The `handleMessageWhenUp` body** — receive the UDP packet, decode it, and drive the generated
-   `bool` event methods.
-2. **A simulation to host the module** — a network `.ned` that instantiates `<Name>` as a routing
-   app over `Udp`/`Ipv4`, and an `omnetpp.ini` `[Config]` selecting it.
+1. **The extension-point wiring** — inside the generated `sendDown()` / `sendUp()`, decide which
+   `bool` event methods fire on which packets (the protocol-specific dispatch). The shell itself —
+   timer, socket, `handleMessageWhenUp` dispatch, lifecycle — is already generated.
+2. **A simulation to host the module** — a network `.ned` that instantiates `<Name>` as `app[0]`
+   on the nodes (it is an `IApp`), and an `omnetpp.ini` `[Config]` setting `sinkAddress` /
+   `networkProtocol`.
 
 Then build and run from the OMNeT++ **CLANG64** shell
 (`omnetpp-6.3.0\tools\win32.x86_64\usr\bin\bash.exe`, after `source .../setenv`):

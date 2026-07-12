@@ -38,10 +38,52 @@ describe("codeEmitter", () => {
     expect(h).toContain("std::set<PktId> createdPkts");
     expect(h).toContain("std::map<PktId, Node> pktFwdr");
   });
-  it("wraps the class in RoutingProtocolBase with the OperationalBase override set", () => {
+  it("wraps the class in the INET SensorApp shell: ApplicationBase + socket callback", () => {
     const h = file("h");
-    expect(h).toContain("class Pm1App : public RoutingProtocolBase");
-    expect(h).toContain("void handleMessageWhenUp(cMessage *msg) override");
+    expect(h).toContain("class Pm1App : public ApplicationBase, public INetworkSocket::ICallback");
+    expect(h).toContain('#include "inet/applications/base/ApplicationBase.h"');
+    // INetworkSocket.h uses Protocol without including it; Protocol.h must
+    // come first (same include order as SensorApp.h) or the header won't parse.
+    expect(h).toMatch(/#include "inet\/common\/Protocol\.h"[\s\S]*#include "inet\/networklayer\/contract\/INetworkSocket\.h"/);
+    expect(h).toContain("void handleMessageWhenUp(cMessage *msg) override;");
+    expect(h).not.toContain("RoutingProtocolBase");
+  });
+  it("emits the send-down path shaped like SensorApp::sendSensorPacket", () => {
+    const cc = file("cc");
+    expect(cc).toContain("void Pm1App::sendDown()");
+    expect(cc).toContain("packet->addTag<L3AddressReq>()->setDestAddress(sinkAddress);");
+    expect(cc).toContain("emit(packetSentSignal, packet);");
+    expect(cc).toContain("socket->send(packet);");
+  });
+  it("emits the send-up path: socketDataArrived delivers into sendUp", () => {
+    const cc = file("cc");
+    expect(cc).toContain("void Pm1App::sendUp(Packet *packet)");
+    expect(cc).toMatch(/void Pm1App::socketDataArrived\([^)]*\)\s*\{\s*sendUp\(packet\);\s*\}/);
+    expect(cc).toContain("emit(packetReceivedSignal, packet);");
+  });
+  it("dispatches in handleMessageWhenUp: timer → sendDown, socket msg → receive path", () => {
+    const cc = file("cc");
+    const body = cc.slice(cc.indexOf("void Pm1App::handleMessageWhenUp"));
+    expect(body).toContain("sendDown();");
+    expect(body).toContain("scheduleNextSensing(simTime());");
+    expect(body).toContain("socket->processMessage(msg);");
+  });
+  it("implements the lifecycle handlers with SensorApp bodies, not empty stubs", () => {
+    const cc = file("cc");
+    expect(cc).toMatch(/void Pm1App::handleStartOperation\([^)]*\)\s*\{[^}]*openSocket\(\);/);
+    expect(cc).toMatch(/void Pm1App::handleStopOperation\([^)]*\)\s*\{[^}]*cancelNextSensing\(\);/);
+    expect(cc).toMatch(/void Pm1App::handleCrashOperation\([^)]*\)\s*\{[^}]*destroy\(\);/);
+  });
+  it("reads SensorApp parameters in initialize(INITSTAGE_LOCAL)", () => {
+    const cc = file("cc");
+    expect(cc).toContain("void Pm1App::initialize(int stage)");
+    expect(cc).toContain("ApplicationBase::initialize(stage);");
+    expect(cc).toContain('timer = new cMessage("sensingTimer");');
+  });
+  it("marks the Event-B wiring extension points inside sendDown and sendUp", () => {
+    const cc = file("cc");
+    expect(cc).toContain("EXTENSION POINT (send-down flow)");
+    expect(cc).toContain("EXTENSION POINT (send-up flow)");
   });
   it("emits a guarded method per event with early-return guards", () => {
     const cc = file("cc");
@@ -55,12 +97,19 @@ describe("codeEmitter", () => {
   });
   it("emits a NED-resolvable module: standalone simple like IApp, class bound via @class", () => {
     const ned = file("ned");
-    // RoutingProtocolBase has no NED type in INET 4.5 — extending it would
-    // fail NED resolution; the C++ base is bound with @class instead.
-    expect(ned).not.toContain("extends RoutingProtocolBase");
+    expect(ned).not.toContain("RoutingProtocolBase");
     expect(ned).toContain("simple Pm1App like IApp");
     expect(ned).toContain("@class(Pm1App)");
-    expect(ned).toContain("input socketIn");
-    expect(ned).toContain("output socketOut");
+    expect(ned).toContain("input socketIn @labels(ITransportPacket/up)");
+    expect(ned).toContain("output socketOut @labels(ITransportPacket/down)");
+  });
+  it("declares the SensorApp parameters and signals in the NED module", () => {
+    const ned = file("ned");
+    expect(ned).toContain('string sinkAddress = default("")');
+    expect(ned).toContain("volatile double sensingInterval @unit(s)");
+    expect(ned).toContain("int payloadLength @unit(B)");
+    expect(ned).toContain('string networkProtocol = default("")');
+    expect(ned).toContain("@signal[packetSent](type=inet::Packet)");
+    expect(ned).toContain("@signal[packetReceived](type=inet::Packet)");
   });
 });

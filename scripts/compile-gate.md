@@ -33,7 +33,7 @@ path `omnetpp.h` is not found, and without `-DINET_IMPORT` INET's export macros
 mis-expand. `-I out` lets each `.cc` resolve `eb_helpers.h` / `eb_context.h`
 (staged next to the generated code by `npm run generate`).
 
-## Result (2026-07-01)
+## Result (2026-07-13)
 
 The merged module passes `-fsyntax-only` (exit 0):
 
@@ -41,9 +41,13 @@ The merged module passes `-fsyntax-only` (exit 0):
 |---|---|---|---|
 | shDecom6_2 (pM1→uM2→pM3) | pM3 (leaf) | `Pm3App.{h,cc,ned}` | ✓ exit 0 |
 
-The generated class is an `inet::RoutingProtocolBase` subclass (a routing app
-over UDP) with the four `OperationalBase` overrides (`handleMessageWhenUp`,
-`handleStartOperation`, `handleStopOperation`, `handleCrashOperation`) and a
-public constructor; each Event-B event becomes a guarded `bool` method. The
-imperative network-layer message wiring (the `handleMessageWhenUp` body) is the
-documented next step beyond this application-layer generator.
+The generated class is an `inet::ApplicationBase` subclass shaped like INET's
+`SensorApp` (`inet/applications/sensorapp`): `handleMessageWhenUp` dispatches
+the sensing timer into `sendDown()` and socket messages into `sendUp()` via
+`socketDataArrived`; lifecycle handlers open/close an `L3Socket`. Each Event-B
+event becomes a guarded `bool` method; wiring those methods into the two marked
+`EXTENSION POINT` comments is the documented next step beyond this
+application-layer generator.
+
+(2026-07-01 result under the previous `RoutingProtocolBase` empty-stub shell:
+same gate, exit 0.)
