@@ -21,13 +21,14 @@ exports[`snapshot: shDecom6_2 → INET C++ > pM1 1`] = `
 using namespace inet;
 
 // Module shell modelled on INET's SensorApp (inet/applications/sensorapp).
-// The SensorApp packet-flow structures are realized through the model's own
-// CommPattern events when it has them (thesis S4/S5): send_down() carries the
-// transmit structure (SensorApp::sendSensorPacket) and send_up() the receive
-// accounting; a model without the pair gets SensorApp's own sendSensorPacket()
-// instead. Binding the model identities (which node/packet a simulation
-// message is) happens at the marked extension points in handleMessageWhenUp()
-// and socketDataArrived().
+// The model's CommPattern pair is emitted under SensorApp's names (thesis
+// S4/S5): Event-B send_down → sendSensorPacket(...) carrying the transmit
+// structure, Event-B send_up → a socketDataArrived(...) model overload
+// carrying the receive accounting; every other event keeps its Event-B name
+// and pure translation-rules body. A model without the pair gets SensorApp's
+// own sendSensorPacket() instead. Binding the model identities (which
+// node/packet a simulation message is) happens at the marked extension points
+// in handleMessageWhenUp() and the socket-callback socketDataArrived().
 class Pm1App : public ApplicationBase, public INetworkSocket::ICallback {
   protected:
     // ── Event-B machine state ──
@@ -67,7 +68,7 @@ class Pm1App : public ApplicationBase, public INetworkSocket::ICallback {
     void finish() override;
     void refreshDisplay() const override;
 
-    // SensorApp shell helpers (the transmit structure lives in send_down below)
+    // SensorApp shell helpers (the transmit structure lives in sendSensorPacket(x, pkt) below — Event-B: send_down)
     virtual void openSocket();
     virtual void scheduleNextSensing(simtime_t previous);
     virtual void cancelNextSensing();
@@ -86,8 +87,8 @@ class Pm1App : public ApplicationBase, public INetworkSocket::ICallback {
     // first (early return), then the actions run.
     bool creatingPkt(Node x, int des, PktId pkt, Data data);
     bool start_tx(Node x, PktId pkt);
-    bool send_down(Node x, PktId pkt);
-    bool send_up(Node x, PktId pkt, const std::set<Node>& nbrs);
+    bool sendSensorPacket(Node x, PktId pkt);   // Event-B: send_down
+    bool socketDataArrived(Node x, PktId pkt, const std::set<Node>& nbrs);   // Event-B: send_up
     bool receive(Node nb, PktId pkt);
     bool clear_recvdBuff(Node nb, PktId pkt);
     bool fwdr_receive_pkt(Node nb, PktId pkt);
@@ -194,8 +195,9 @@ void Pm1App::handleMessageWhenUp(cMessage *msg) {
     if (msg->isSelfMessage()) {
         ASSERT(msg == timer);
         // EXTENSION POINT (send-down flow): bind the model identities and
-        // drive the transmit chain — e.g. start_tx(...), then send_down(x, pkt);
-        // send_down() itself carries the SensorApp transmit structure.
+        // drive the transmit chain — e.g. start_tx(...), then
+        // sendSensorPacket(x, pkt) (Event-B: send_down), which carries the
+        // SensorApp transmit structure.
         scheduleNextSensing(simTime());
     }
     else if (socket && socket->belongsToSocket(msg)) {
@@ -211,8 +213,9 @@ void Pm1App::handleMessageWhenUp(cMessage *msg) {
 // handleMessageWhenUp → socket (same as SensorApp).
 void Pm1App::socketDataArrived(INetworkSocket *, Packet *packet) {
     // EXTENSION POINT (send-up flow): bind the model identities and let the
-    // model consume the delivery — e.g. send_up(x, pkt, nbrs); send_up()
-    // itself carries the SensorApp receive accounting.
+    // model consume the delivery — e.g. socketDataArrived(x, pkt, nbrs)
+    // (Event-B: send_up), the model overload carrying the SensorApp receive
+    // accounting.
 
     EV_INFO << "received " << packet->getByteLength() << "B\\n";
     emit(packetReceivedSignal, packet);
@@ -277,7 +280,8 @@ bool Pm1App::start_tx(Node x, PktId pkt) {
     return true;
 }
 
-bool Pm1App::send_down(Node x, PktId pkt) {
+// Event-B: send_down — emitted under its SensorApp name (thesis S4, transmit).
+bool Pm1App::sendSensorPacket(Node x, PktId pkt) {
     if (!(sentDown.count({x, pkt}) > 0)) return false;
     // — SensorApp transmit structure (SensorApp::sendSensorPacket) —
     if (socket == nullptr || sinkAddress.isUnspecified()) {
@@ -298,7 +302,8 @@ bool Pm1App::send_down(Node x, PktId pkt) {
     return true;
 }
 
-bool Pm1App::send_up(Node x, PktId pkt, const std::set<Node>& nbrs) {
+// Event-B: send_up — emitted under its SensorApp name (thesis S5, receive).
+bool Pm1App::socketDataArrived(Node x, PktId pkt, const std::set<Node>& nbrs) {
     if (!(sentUp.count({x, pkt}) == 0)) return false;
     if (!(sentDown.count({x, pkt}) > 0)) return false;
     if (!(ctlNeighbours.count(pkt) == 0)) return false;
@@ -428,13 +433,14 @@ exports[`snapshot: shDecom6_2 → INET C++ > pM3 1`] = `
 using namespace inet;
 
 // Module shell modelled on INET's SensorApp (inet/applications/sensorapp).
-// The SensorApp packet-flow structures are realized through the model's own
-// CommPattern events when it has them (thesis S4/S5): send_down() carries the
-// transmit structure (SensorApp::sendSensorPacket) and send_up() the receive
-// accounting; a model without the pair gets SensorApp's own sendSensorPacket()
-// instead. Binding the model identities (which node/packet a simulation
-// message is) happens at the marked extension points in handleMessageWhenUp()
-// and socketDataArrived().
+// The model's CommPattern pair is emitted under SensorApp's names (thesis
+// S4/S5): Event-B send_down → sendSensorPacket(...) carrying the transmit
+// structure, Event-B send_up → a socketDataArrived(...) model overload
+// carrying the receive accounting; every other event keeps its Event-B name
+// and pure translation-rules body. A model without the pair gets SensorApp's
+// own sendSensorPacket() instead. Binding the model identities (which
+// node/packet a simulation message is) happens at the marked extension points
+// in handleMessageWhenUp() and the socket-callback socketDataArrived().
 class Pm3App : public ApplicationBase, public INetworkSocket::ICallback {
   protected:
     // ── Event-B machine state ──
@@ -476,7 +482,7 @@ class Pm3App : public ApplicationBase, public INetworkSocket::ICallback {
     void finish() override;
     void refreshDisplay() const override;
 
-    // SensorApp shell helpers (the transmit structure lives in send_down below)
+    // SensorApp shell helpers (the transmit structure lives in sendSensorPacket(x, pkt) below — Event-B: send_down)
     virtual void openSocket();
     virtual void scheduleNextSensing(simtime_t previous);
     virtual void cancelNextSensing();
@@ -497,8 +503,8 @@ class Pm3App : public ApplicationBase, public INetworkSocket::ICallback {
     bool creatingDataPacket(Node x, int des, PktId pkt, Data data);
     bool creatingControlPacket(Node x, int des, PktId pkt, Data data);
     bool start_tx(Node x, PktId pkt);
-    bool send_down(Node x, PktId pkt);
-    bool send_up(Node x, PktId pkt, const std::set<Node>& nbrs);
+    bool sendSensorPacket(Node x, PktId pkt);   // Event-B: send_down
+    bool socketDataArrived(Node x, PktId pkt, const std::set<Node>& nbrs);   // Event-B: send_up
     bool receive(Node nb, PktId pkt);
     bool clear_recvdBuff(Node nb, PktId pkt);
     bool fwdr_receive_pkt(Node nb, PktId pkt);
@@ -607,8 +613,9 @@ void Pm3App::handleMessageWhenUp(cMessage *msg) {
     if (msg->isSelfMessage()) {
         ASSERT(msg == timer);
         // EXTENSION POINT (send-down flow): bind the model identities and
-        // drive the transmit chain — e.g. start_tx(...), then send_down(x, pkt);
-        // send_down() itself carries the SensorApp transmit structure.
+        // drive the transmit chain — e.g. start_tx(...), then
+        // sendSensorPacket(x, pkt) (Event-B: send_down), which carries the
+        // SensorApp transmit structure.
         scheduleNextSensing(simTime());
     }
     else if (socket && socket->belongsToSocket(msg)) {
@@ -624,8 +631,9 @@ void Pm3App::handleMessageWhenUp(cMessage *msg) {
 // handleMessageWhenUp → socket (same as SensorApp).
 void Pm3App::socketDataArrived(INetworkSocket *, Packet *packet) {
     // EXTENSION POINT (send-up flow): bind the model identities and let the
-    // model consume the delivery — e.g. send_up(x, pkt, nbrs); send_up()
-    // itself carries the SensorApp receive accounting.
+    // model consume the delivery — e.g. socketDataArrived(x, pkt, nbrs)
+    // (Event-B: send_up), the model overload carrying the SensorApp receive
+    // accounting.
 
     EV_INFO << "received " << packet->getByteLength() << "B\\n";
     emit(packetReceivedSignal, packet);
@@ -719,7 +727,8 @@ bool Pm3App::start_tx(Node x, PktId pkt) {
     return true;
 }
 
-bool Pm3App::send_down(Node x, PktId pkt) {
+// Event-B: send_down — emitted under its SensorApp name (thesis S4, transmit).
+bool Pm3App::sendSensorPacket(Node x, PktId pkt) {
     if (!(sentDown.count({x, pkt}) > 0)) return false;
     // — SensorApp transmit structure (SensorApp::sendSensorPacket) —
     if (socket == nullptr || sinkAddress.isUnspecified()) {
@@ -740,7 +749,8 @@ bool Pm3App::send_down(Node x, PktId pkt) {
     return true;
 }
 
-bool Pm3App::send_up(Node x, PktId pkt, const std::set<Node>& nbrs) {
+// Event-B: send_up — emitted under its SensorApp name (thesis S5, receive).
+bool Pm3App::socketDataArrived(Node x, PktId pkt, const std::set<Node>& nbrs) {
     if (!(sentUp.count({x, pkt}) == 0)) return false;
     if (!(sentDown.count({x, pkt}) > 0)) return false;
     if (!(ctlNeighbours.count(pkt) == 0)) return false;
@@ -870,13 +880,14 @@ exports[`snapshot: shDecom6_2 → INET C++ > uM2 1`] = `
 using namespace inet;
 
 // Module shell modelled on INET's SensorApp (inet/applications/sensorapp).
-// The SensorApp packet-flow structures are realized through the model's own
-// CommPattern events when it has them (thesis S4/S5): send_down() carries the
-// transmit structure (SensorApp::sendSensorPacket) and send_up() the receive
-// accounting; a model without the pair gets SensorApp's own sendSensorPacket()
-// instead. Binding the model identities (which node/packet a simulation
-// message is) happens at the marked extension points in handleMessageWhenUp()
-// and socketDataArrived().
+// The model's CommPattern pair is emitted under SensorApp's names (thesis
+// S4/S5): Event-B send_down → sendSensorPacket(...) carrying the transmit
+// structure, Event-B send_up → a socketDataArrived(...) model overload
+// carrying the receive accounting; every other event keeps its Event-B name
+// and pure translation-rules body. A model without the pair gets SensorApp's
+// own sendSensorPacket() instead. Binding the model identities (which
+// node/packet a simulation message is) happens at the marked extension points
+// in handleMessageWhenUp() and the socket-callback socketDataArrived().
 class Um2App : public ApplicationBase, public INetworkSocket::ICallback {
   protected:
     // ── Event-B machine state ──
@@ -916,7 +927,7 @@ class Um2App : public ApplicationBase, public INetworkSocket::ICallback {
     void finish() override;
     void refreshDisplay() const override;
 
-    // SensorApp shell helpers (the transmit structure lives in send_down below)
+    // SensorApp shell helpers (the transmit structure lives in sendSensorPacket(x, pkt) below — Event-B: send_down)
     virtual void openSocket();
     virtual void scheduleNextSensing(simtime_t previous);
     virtual void cancelNextSensing();
@@ -935,8 +946,8 @@ class Um2App : public ApplicationBase, public INetworkSocket::ICallback {
     // first (early return), then the actions run.
     bool creatingControlPacket(Node x, int des, PktId pkt, Data data);
     bool start_tx(Node x, PktId pkt);
-    bool send_down(Node x, PktId pkt);
-    bool send_up(Node x, PktId pkt, const std::set<Node>& nbrs);
+    bool sendSensorPacket(Node x, PktId pkt);   // Event-B: send_down
+    bool socketDataArrived(Node x, PktId pkt, const std::set<Node>& nbrs);   // Event-B: send_up
     bool receive(Node nb, PktId pkt);
     bool clear_recvdBuff(Node nb, PktId pkt);
     bool fwdr_receive_pkt(Node nb, PktId pkt);
@@ -1044,8 +1055,9 @@ void Um2App::handleMessageWhenUp(cMessage *msg) {
     if (msg->isSelfMessage()) {
         ASSERT(msg == timer);
         // EXTENSION POINT (send-down flow): bind the model identities and
-        // drive the transmit chain — e.g. start_tx(...), then send_down(x, pkt);
-        // send_down() itself carries the SensorApp transmit structure.
+        // drive the transmit chain — e.g. start_tx(...), then
+        // sendSensorPacket(x, pkt) (Event-B: send_down), which carries the
+        // SensorApp transmit structure.
         scheduleNextSensing(simTime());
     }
     else if (socket && socket->belongsToSocket(msg)) {
@@ -1061,8 +1073,9 @@ void Um2App::handleMessageWhenUp(cMessage *msg) {
 // handleMessageWhenUp → socket (same as SensorApp).
 void Um2App::socketDataArrived(INetworkSocket *, Packet *packet) {
     // EXTENSION POINT (send-up flow): bind the model identities and let the
-    // model consume the delivery — e.g. send_up(x, pkt, nbrs); send_up()
-    // itself carries the SensorApp receive accounting.
+    // model consume the delivery — e.g. socketDataArrived(x, pkt, nbrs)
+    // (Event-B: send_up), the model overload carrying the SensorApp receive
+    // accounting.
 
     EV_INFO << "received " << packet->getByteLength() << "B\\n";
     emit(packetReceivedSignal, packet);
@@ -1129,7 +1142,8 @@ bool Um2App::start_tx(Node x, PktId pkt) {
     return true;
 }
 
-bool Um2App::send_down(Node x, PktId pkt) {
+// Event-B: send_down — emitted under its SensorApp name (thesis S4, transmit).
+bool Um2App::sendSensorPacket(Node x, PktId pkt) {
     if (!(sentDown.count({x, pkt}) > 0)) return false;
     // — SensorApp transmit structure (SensorApp::sendSensorPacket) —
     if (socket == nullptr || sinkAddress.isUnspecified()) {
@@ -1150,7 +1164,8 @@ bool Um2App::send_down(Node x, PktId pkt) {
     return true;
 }
 
-bool Um2App::send_up(Node x, PktId pkt, const std::set<Node>& nbrs) {
+// Event-B: send_up — emitted under its SensorApp name (thesis S5, receive).
+bool Um2App::socketDataArrived(Node x, PktId pkt, const std::set<Node>& nbrs) {
     if (!(sentUp.count({x, pkt}) == 0)) return false;
     if (!(sentDown.count({x, pkt}) > 0)) return false;
     if (!(ctlNeighbours.count(pkt) == 0)) return false;

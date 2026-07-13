@@ -46,7 +46,8 @@ describe("pipeline.generateMerged (whole project → one module)", () => {
     // sensing event added at pM3 AND events introduced back at pM1.
     const cc = tree.find((f) => f.path === "Pm3App.cc")!.content;
     expect(cc).toContain("bool Pm3App::sensing(");   // added at pM3 (leaf)
-    expect(cc).toContain("bool Pm3App::send_up(");   // introduced at pM1 (base)
+    // send_up is introduced at pM1 (base) and emitted under its SensorApp name
+    expect(cc).toContain("bool Pm3App::socketDataArrived(");
   });
   it("merges regardless of file order (leaf is content, not position)", () => {
     const tree = generateMerged([load("pM3"), load("pM1"), load("uM2")]);

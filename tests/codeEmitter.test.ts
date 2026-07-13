@@ -69,39 +69,40 @@ describe("codeEmitter", () => {
     expect(h).toContain("void handleMessageWhenUp(cMessage *msg) override;");
     expect(h).not.toContain("RoutingProtocolBase");
   });
-  it("merges SensorApp's transmit structure into the pattern's send_down (thesis S4)", () => {
+  it("emits the pattern's send_down as sendSensorPacket, merged with the transmit structure (thesis S4)", () => {
     const cc = file("cc");
-    const body = fn(cc, "bool Pm1App::send_down");
+    const body = fn(cc, "bool Pm1App::sendSensorPacket");
     expect(body).toContain("if (!(sentDown.count({x, pkt}) > 0)) return false;"); // model guard first
     expect(body).toContain("packet->addTag<L3AddressReq>()->setDestAddress(sinkAddress);");
     expect(body).toContain("emit(packetSentSignal, packet);");
     expect(body).toContain("socket->send(packet);");
-    // merged, not duplicated: no separate shell send function (comments may
-    // still cite SensorApp::sendSensorPacket as provenance), no invented names
-    expect(cc).not.toMatch(/void Pm1App::sendSensorPacket/);
-    expect(cc).not.toMatch(/sendSensorPacket\(\);/);
+    // renamed, not duplicated: the Event-B label survives only as provenance
+    expect(cc).toContain("Event-B: send_down");
+    expect(cc).not.toMatch(/bool Pm1App::send_down/);
+    expect(cc).not.toMatch(/void Pm1App::sendSensorPacket/); // no separate void shell fn
     expect(cc).not.toMatch(/void Pm1App::sendDown\(/);
     expect(cc).not.toMatch(/void Pm1App::sendUp\(/);
-    expect(file("h")).not.toMatch(/virtual void sendSensorPacket/);
   });
-  it("merges SensorApp's receive structure into the pattern's send_up (thesis S5)", () => {
+  it("emits the pattern's send_up as a socketDataArrived model overload (thesis S5)", () => {
     const cc = file("cc");
-    const body = fn(cc, "bool Pm1App::send_up");
+    const body = fn(cc, "bool Pm1App::socketDataArrived");
     expect(body).toContain("if (!(sentUp.count({x, pkt}) == 0)) return false;"); // model guards kept
     expect(body).toContain("receivedCount++;");
     expect(body).toContain("sentUp.insert({x, pkt});"); // model actions kept
+    expect(cc).toContain("Event-B: send_up");
+    expect(cc).not.toMatch(/bool Pm1App::send_up/);
   });
-  it("socketDataArrived keeps the packet-object mechanics and points at send_up", () => {
+  it("the socket-callback socketDataArrived keeps the packet-object mechanics and points at the model overload", () => {
     const cc = file("cc");
     const body = fn(cc, "void Pm1App::socketDataArrived");
     expect(body).toContain("emit(packetReceivedSignal, packet);");
     expect(body).toContain("delete packet;");
-    expect(body).toContain("send_up");
+    expect(body).toMatch(/socketDataArrived\(x/); // example call in the extension point
   });
-  it("timer branch of handleMessageWhenUp points at send_down and reschedules", () => {
+  it("timer branch of handleMessageWhenUp points at sendSensorPacket(x, pkt) and reschedules", () => {
     const cc = file("cc");
     const body = fn(cc, "void Pm1App::handleMessageWhenUp");
-    expect(body).toContain("send_down");
+    expect(body).toMatch(/sendSensorPacket\(x/); // example call in the extension point
     expect(body).toContain("scheduleNextSensing(simTime());");
     expect(body).toContain("socket->processMessage(msg);");
   });

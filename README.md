@@ -13,10 +13,11 @@ generation run entirely in your browser. A headless CLI + compile gate are inclu
 **Live demo:** https://komenpetch.github.io/wsn-codegen/
 
 > **Application layer.** Each Event-B event is translated to a guarded `bool` method, wrapped in a
-> working SensorApp-shaped shell. When the model has the CommPattern `send_down`/`send_up` pair,
-> those two event methods themselves carry SensorApp's packet-flow structure (transmit and receive);
-> binding the model identities at the two marked extension points is the step you complete by hand —
-> see [What it does / doesn't do](#what-it-does--doesnt-do).
+> working SensorApp-shaped shell. The CommPattern `send_down`/`send_up` pair is emitted under
+> SensorApp's own names — `sendSensorPacket(...)` (transmit) and a `socketDataArrived(...)` overload
+> (receive) — carrying SensorApp's packet-flow structure inside the Event-B guards/actions; binding
+> the model identities at the two marked extension points is the step you complete by hand — see
+> [What it does / doesn't do](#what-it-does--doesnt-do).
 
 ---
 
@@ -76,13 +77,15 @@ single measurable success criterion (Form 01 §6). The exact toolchain paths and
 | `<Name>.h` / `<Name>.cc` | INET 4.5 `ApplicationBase` subclass shaped like INET's `SensorApp`; one guarded `bool` method per Event-B event |
 | `<Name>.ned` | standalone `simple <Name> like IApp` module bound to the class via `@class`, with SensorApp's parameters, signals, and statistics |
 
-The generated class is a working **SensorApp-shaped shell**, and the SensorApp packet-flow
-structures are **merged into the model's own CommPattern events** when it has them (thesis
-Steps S4/S5): `send_down(...)` runs its Event-B guards, then SensorApp's transmit structure
-(build a packet, tag it, `socket->send` — the `SensorApp::sendSensorPacket` body); `send_up(...)`
-runs its guards, then the receive accounting, then its Event-B state actions. A model without the
-pair gets SensorApp's own `sendSensorPacket()` as fallback. `handleMessageWhenUp` dispatches the
-sensing timer (send-down flow) and socket messages (send-up flow via `socketDataArrived`);
+The generated class is a working **SensorApp-shaped shell**, and the model's CommPattern events are
+**emitted under SensorApp's names, merged with its structures** (thesis Steps S4/S5): Event-B
+`send_down` becomes `bool sendSensorPacket(...)` — its Event-B guards, then SensorApp's transmit
+structure (build a packet, tag it, `socket->send`); Event-B `send_up` becomes a
+`bool socketDataArrived(...)` model overload — its guards, the receive accounting, then its Event-B
+state actions. Every other event keeps its Event-B name and pure translation-rules body, and each
+renamed method carries an `// Event-B: …` provenance comment. A model without the pair gets
+SensorApp's own `void sendSensorPacket()` as fallback. `handleMessageWhenUp` dispatches the sensing
+timer (send-down flow) and socket messages (send-up flow via the `socketDataArrived` callback);
 lifecycle handlers open/close the `L3Socket`; the public constructor is seeded from
 `INITIALISATION`; state fields are ENC-typed. It `#include`s the two shared headers `eb_helpers.h`
 (pair-set `inDom`/`inRan`) and `eb_context.h` (element aliases + context constants).
@@ -91,8 +94,8 @@ lifecycle handlers open/close the `L3Socket`; the public constructor is seeded f
 
 **Generated for you:** the model's state fields (typed by encoding form ENC1–6), the SensorApp-shaped
 shell (timer, socket, lifecycle), one guarded `bool` method per event — early-return guards followed
-by the translated action statements — and, for the CommPattern `send_down`/`send_up` pair, the
-SensorApp transmit/receive structures merged inside those methods.
+by the translated action statements — and the CommPattern pair emitted as
+`sendSensorPacket`/`socketDataArrived` with the SensorApp transmit/receive structures merged inside.
 
 **Hand-completed:** binding the model identities at the two marked `EXTENSION POINT` comments —
 in `handleMessageWhenUp` (which node/packet ids drive `start_tx`/`send_down` when the timer fires)

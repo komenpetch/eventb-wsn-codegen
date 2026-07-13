@@ -17,11 +17,13 @@ npm run generate -- <inputDir> <outDir>    # every machine found → <outDir>
 npm run generate                           # tests/fixtures/shdecom → out/
 ```
 
-The class is a working **SensorApp-shaped shell**, with the SensorApp packet-flow structures
-**merged into the model's CommPattern events** when present (thesis S4/S5): `send_down(...)` =
-Event-B guards + the `SensorApp::sendSensorPacket` transmit structure; `send_up(...)` = Event-B
-guards + receive accounting + Event-B actions. A model without the pair gets SensorApp's own
-`sendSensorPacket()` as fallback. `handleMessageWhenUp` dispatches timer/socket messages; the
+The class is a working **SensorApp-shaped shell**; the model's CommPattern pair is **emitted under
+SensorApp's names, merged with its structures** (thesis S4/S5): Event-B `send_down` →
+`bool sendSensorPacket(...)` = guards + the SensorApp transmit structure; Event-B `send_up` →
+`bool socketDataArrived(...)` (a model overload beside the INET callback) = guards + receive
+accounting + actions. Each carries an `// Event-B: …` provenance comment; all other events keep
+their Event-B names. A model without the pair gets SensorApp's own `void sendSensorPacket()` as
+fallback. `handleMessageWhenUp` dispatches timer/socket messages; the
 lifecycle handlers open/close an `L3Socket` bound to the `networkProtocol` NED parameter; the
 public constructor is seeded from `INITIALISATION`. The **hand-completed next step** is the
 identity binding at the two marked `EXTENSION POINT` comments (in `handleMessageWhenUp`: which

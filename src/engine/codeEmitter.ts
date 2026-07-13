@@ -89,8 +89,21 @@ export function emit(model: EncodedMachine, name: string): GeneratedTree {
   for (const raw of model.events) {
     if (raw.label === "INITIALISATION") continue;
     const t = translateEvent(raw, model);
-    const sig = `bool ${t.label}(${params(raw)})`;
-    decls.push(`    ${sig};`);
+    // The CommPattern pair is emitted under its SensorApp name (thesis S4/S5);
+    // the Event-B label is kept as provenance so the model stays traceable.
+    const inetName =
+      raw.label === "send_down" ? "sendSensorPacket"
+      : raw.label === "send_up" ? "socketDataArrived"
+      : undefined;
+    const cppName = inetName ?? t.label;
+    decls.push(
+      inetName
+        ? `    bool ${cppName}(${params(raw)});   // Event-B: ${raw.label}`
+        : `    bool ${cppName}(${params(raw)});`,
+    );
+    const prov = inetName
+      ? `// Event-B: ${raw.label} — emitted under its SensorApp name (thesis ${raw.label === "send_down" ? "S4, transmit" : "S5, receive"}).\n`
+      : "";
     // Untranslated clauses stay visible: omitting a guard silently weakens
     // the precondition, omitting an action silently weakens the effect.
     const noteG = t.untranslatedGuards.map((g) => `    // UNTRANSLATED GUARD: ${g}`);
@@ -102,7 +115,7 @@ export function emit(model: EncodedMachine, name: string): GeneratedTree {
     if (inject.length === 0 && t.actions.length === 0 && noteA.length === 0) {
       const pred = t.guards.length ? t.guards.join(" && ") : "true";
       const body = [...noteG, `    return ${pred};`].join("\n");
-      defs.push(`bool ${name}::${t.label}(${params(raw)}) {\n${body}\n}`);
+      defs.push(`${prov}bool ${name}::${cppName}(${params(raw)}) {\n${body}\n}`);
     } else {
       const body = [
         ...t.guards.map((g) => `    if (!(${g})) return false;`),
@@ -112,7 +125,7 @@ export function emit(model: EncodedMachine, name: string): GeneratedTree {
         ...noteA,
         "    return true;",
       ].join("\n");
-      defs.push(`bool ${name}::${t.label}(${params(raw)}) {\n${body}\n}`);
+      defs.push(`${prov}bool ${name}::${cppName}(${params(raw)}) {\n${body}\n}`);
     }
   }
 
@@ -152,13 +165,14 @@ Do not edit by hand — regenerate instead.`;
 using namespace inet;
 
 // Module shell modelled on INET's SensorApp (inet/applications/sensorapp).
-// The SensorApp packet-flow structures are realized through the model's own
-// CommPattern events when it has them (thesis S4/S5): send_down() carries the
-// transmit structure (SensorApp::sendSensorPacket) and send_up() the receive
-// accounting; a model without the pair gets SensorApp's own sendSensorPacket()
-// instead. Binding the model identities (which node/packet a simulation
-// message is) happens at the marked extension points in handleMessageWhenUp()
-// and socketDataArrived().
+// The model's CommPattern pair is emitted under SensorApp's names (thesis
+// S4/S5): Event-B send_down → sendSensorPacket(...) carrying the transmit
+// structure, Event-B send_up → a socketDataArrived(...) model overload
+// carrying the receive accounting; every other event keeps its Event-B name
+// and pure translation-rules body. A model without the pair gets SensorApp's
+// own sendSensorPacket() instead. Binding the model identities (which
+// node/packet a simulation message is) happens at the marked extension points
+// in handleMessageWhenUp() and the socket-callback socketDataArrived().
 class ${name} : public ApplicationBase, public INetworkSocket::ICallback {
   protected:
     // ── Event-B machine state ──
@@ -189,7 +203,7 @@ ${fields}
     void finish() override;
     void refreshDisplay() const override;
 
-    // SensorApp shell helpers${hasSendDown ? " (the transmit structure lives in send_down below)" : ""}
+    // SensorApp shell helpers${hasSendDown ? " (the transmit structure lives in sendSensorPacket(x, pkt) below — Event-B: send_down)" : ""}
     virtual void openSocket();
 ${hasSendDown ? "" : "    virtual void sendSensorPacket();\n"}    virtual void scheduleNextSensing(simtime_t previous);
     virtual void cancelNextSensing();
@@ -321,8 +335,9 @@ void ${name}::handleMessageWhenUp(cMessage *msg) {
         ASSERT(msg == timer);
 ${hasSendDown
     ? `        // EXTENSION POINT (send-down flow): bind the model identities and
-        // drive the transmit chain — e.g. start_tx(...), then send_down(x, pkt);
-        // send_down() itself carries the SensorApp transmit structure.`
+        // drive the transmit chain — e.g. start_tx(...), then
+        // sendSensorPacket(x, pkt) (Event-B: send_down), which carries the
+        // SensorApp transmit structure.`
     : "        sendSensorPacket();"}
         scheduleNextSensing(simTime());
     }
@@ -340,8 +355,9 @@ ${hasSendDown
 void ${name}::socketDataArrived(INetworkSocket *, Packet *packet) {
 ${hasSendUp
     ? `    // EXTENSION POINT (send-up flow): bind the model identities and let the
-    // model consume the delivery — e.g. send_up(x, pkt, nbrs); send_up()
-    // itself carries the SensorApp receive accounting.`
+    // model consume the delivery — e.g. socketDataArrived(x, pkt, nbrs)
+    // (Event-B: send_up), the model overload carrying the SensorApp receive
+    // accounting.`
     : `    // EXTENSION POINT (send-up flow): dispatch to the generated Event-B
     // receive-side event methods declared above.
     receivedCount++;`}

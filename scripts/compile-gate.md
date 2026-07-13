@@ -43,13 +43,14 @@ The merged module passes `-fsyntax-only` (exit 0):
 
 The generated class is an `inet::ApplicationBase` subclass shaped like INET's
 `SensorApp` (`inet/applications/sensorapp`). Each Event-B event becomes a
-guarded `bool` method, and the SensorApp packet-flow structures are merged
-into the model's CommPattern pair (thesis S4/S5): `send_down(...)` = guards +
-the `SensorApp::sendSensorPacket` transmit body; `send_up(...)` = guards +
-receive accounting + actions (fallback `sendSensorPacket()` when a model has
-no such pair). `handleMessageWhenUp` dispatches timer/socket messages;
-lifecycle handlers open/close an `L3Socket`. The documented next step is the
-identity binding at the two marked `EXTENSION POINT` comments.
+guarded `bool` method; the CommPattern pair is emitted under SensorApp's
+names, merged with its structures (thesis S4/S5): Event-B `send_down` →
+`bool sendSensorPacket(...)` = guards + the SensorApp transmit body; Event-B
+`send_up` → `bool socketDataArrived(...)` model overload = guards + receive
+accounting + actions (fallback `void sendSensorPacket()` when a model has no
+such pair). `handleMessageWhenUp` dispatches timer/socket messages; lifecycle
+handlers open/close an `L3Socket`. The documented next step is the identity
+binding at the two marked `EXTENSION POINT` comments.
 
 (2026-07-01 result under the previous `RoutingProtocolBase` empty-stub shell:
 same gate, exit 0.)
