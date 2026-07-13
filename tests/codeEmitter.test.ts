@@ -72,7 +72,7 @@ describe("codeEmitter", () => {
   it("emits the pattern's send_down as sendSensorPacket, merged with the transmit structure (thesis S4)", () => {
     const cc = file("cc");
     const body = fn(cc, "bool Pm1App::sendSensorPacket");
-    expect(body).toContain("if (!(sentDown.count({x, pkt}) > 0)) return false;"); // model guard first
+    expect(body).toContain("if (!(sentDown.count({x, pkt}) > 0))\n        return false;"); // model guard first
     expect(body).toContain("packet->addTag<L3AddressReq>()->setDestAddress(sinkAddress);");
     expect(body).toContain("emit(packetSentSignal, packet);");
     expect(body).toContain("socket->send(packet);");
@@ -86,7 +86,7 @@ describe("codeEmitter", () => {
   it("emits the pattern's send_up as a socketDataArrived model overload (thesis S5)", () => {
     const cc = file("cc");
     const body = fn(cc, "bool Pm1App::socketDataArrived");
-    expect(body).toContain("if (!(sentUp.count({x, pkt}) == 0)) return false;"); // model guards kept
+    expect(body).toContain("if (!(sentUp.count({x, pkt}) == 0))\n        return false;"); // model guards kept
     expect(body).toContain("receivedCount++;");
     expect(body).toContain("sentUp.insert({x, pkt});"); // model actions kept
     expect(cc).toContain("Event-B: send_up");
@@ -133,7 +133,8 @@ describe("codeEmitter", () => {
   it("emits a guarded method per event with early-return guards", () => {
     const cc = file("cc");
     expect(cc).toMatch(/bool Pm1App::start_tx\([^)]*\)\s*\{/);
-    expect(cc).toContain("if (!(sentDown.count({x, pkt}) == 0)) return false;");
+    // guard early-returns break onto their own indented line
+    expect(cc).toContain("if (!(sentDown.count({x, pkt}) == 0))\n        return false;");
     expect(cc).toContain("return true;");
   });
   it("renders an action-less non-pattern event as a bool predicate", () => {
@@ -156,5 +157,51 @@ describe("codeEmitter", () => {
     expect(ned).toContain('string networkProtocol = default("")');
     expect(ned).toContain("@signal[packetSent](type=inet::Packet)");
     expect(ned).toContain("@signal[packetReceived](type=inet::Packet)");
+  });
+});
+
+// The three comparison outputs for the project report: v1 = the original
+// pre-SensorApp structure, v2 = v1 with only the CommPattern pair changed,
+// v3 = the full SensorApp shell (the default).
+describe("emit versions (compare-table outputs)", () => {
+  const vTree = (v: 1 | 2 | 3) =>
+    emit(resolveEncodings(flatten(parseModel([load("pM1")]), "pM1")), "Pm1App", v);
+  const vFile = (v: 1 | 2 | 3, ext: string) =>
+    vTree(v).find((f) => f.path === `Pm1App.${ext}`)!.content;
+
+  it("v1: original RoutingProtocolBase structure, pattern pair untouched", () => {
+    const h = vFile(1, "h");
+    const cc = vFile(1, "cc");
+    expect(h).toContain("public RoutingProtocolBase");
+    expect(h).not.toContain("ApplicationBase");
+    expect(h).toContain("void handleMessageWhenUp(cMessage *msg) override { delete msg; }");
+    expect(cc).toContain("bool Pm1App::send_down(");
+    expect(cc).toContain("bool Pm1App::send_up(");
+    expect(cc).not.toContain("sendSensorPacket");
+    expect(vFile(1, "ned")).toContain("UdpControlInfo/up");
+  });
+  it("v2: v1 structure with ONLY the pair changed to the merged SensorApp functions", () => {
+    const h = vFile(2, "h");
+    const cc = vFile(2, "cc");
+    expect(h).toContain("public RoutingProtocolBase");   // structure still v1
+    expect(h).not.toContain("ApplicationBase");
+    expect(h).toContain("INetworkSocket *socket");       // minimal members the pair needs
+    expect(cc).toContain("bool Pm1App::sendSensorPacket(Node x, PktId pkt)");
+    expect(cc).toContain("bool Pm1App::socketDataArrived(");
+    expect(cc).toContain("socket->send(packet);");
+    expect(cc).not.toMatch(/Pm1App::send_down\(/);
+    expect(cc).not.toContain("openSocket");              // no shell helpers yet
+    expect(cc).not.toContain("scheduleNextSensing");
+    expect(cc).not.toContain("void Pm1App::initialize");
+  });
+  it("v3 is the default and carries the full SensorApp shell", () => {
+    expect(vFile(3, "h")).toContain("public ApplicationBase");
+    const dflt = emit(resolveEncodings(flatten(parseModel([load("pM1")]), "pM1")), "Pm1App");
+    expect(dflt.find((f) => f.path === "Pm1App.h")!.content).toContain("public ApplicationBase");
+    expect(vFile(3, "cc")).toContain("void Pm1App::openSocket()");
+  });
+  it("all versions break guard early-returns onto their own line", () => {
+    for (const v of [1, 2, 3] as const)
+      expect(vFile(v, "cc")).toContain("if (!(!nbrs.empty()))\n        return false;");
   });
 });

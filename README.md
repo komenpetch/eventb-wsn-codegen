@@ -60,6 +60,7 @@ The on-screen log reports each step. Cancelling a picker logs `Cancelled.` (not 
 ```bash
 npm run generate                        # tests/fixtures/shdecom → out/
 npm run generate -- <inputDir> <outDir> # any Rodin project (every machine found)
+npm run generate -- <inputDir> <outDir> --v1   # emitted-structure version (see below)
 ```
 
 `scripts/generate.ts` reads a folder of Event-B `.bum` files, **merges the whole refinement chain**
@@ -67,6 +68,12 @@ into one module (the most-refined machine, flattened), and stages `eb_helpers.h`
 next to it. Then syntax-check the generated `.cc` against real INET 4.5 headers — the project's
 single measurable success criterion (Form 01 §6). The exact toolchain paths and command are in
 **[scripts/compile-gate.md](scripts/compile-gate.md)**; the merged module passes `-fsyntax-only`.
+
+**Emitted-structure versions** (`--v1`/`--v2`/`--v3`, default v3) exist for the project report's
+compare table and all pass the compile gate: **v1** = the original pre-SensorApp structure
+(`RoutingProtocolBase`, empty lifecycle stubs, pattern pair untouched); **v2** = v1 with *only* the
+CommPattern pair changed into the merged SensorApp functions (plus the minimal members those bodies
+need); **v3** = the full SensorApp shell described below.
 
 ---
 

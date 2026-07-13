@@ -256,12 +256,18 @@ void Pm1App::finish() {
 }
 
 bool Pm1App::creatingPkt(Node x, int des, PktId pkt, Data data) {
-    if (!((ND.count(x) > 0 && Dests.count(x) == 0))) return false;
-    if (!(x == initialSrcAddr.at(pkt))) return false;
-    if (!(des == finalDestAddr.at(pkt))) return false;
-    if (!(pktFwdr.count(pkt) == 0)) return false;
-    if (!(pktData.count(pkt) == 0)) return false;
-    if (!(ndBuff.count({x, pkt}) == 0)) return false;
+    if (!((ND.count(x) > 0 && Dests.count(x) == 0)))
+        return false;
+    if (!(x == initialSrcAddr.at(pkt)))
+        return false;
+    if (!(des == finalDestAddr.at(pkt)))
+        return false;
+    if (!(pktFwdr.count(pkt) == 0))
+        return false;
+    if (!(pktData.count(pkt) == 0))
+        return false;
+    if (!(ndBuff.count({x, pkt}) == 0))
+        return false;
     createdPkts.insert(pkt);
     pktFwdr[pkt] = x;
     pktData[pkt] = data;
@@ -270,10 +276,14 @@ bool Pm1App::creatingPkt(Node x, int des, PktId pkt, Data data) {
 }
 
 bool Pm1App::start_tx(Node x, PktId pkt) {
-    if (!(sentDown.count({x, pkt}) == 0)) return false;
-    if (!(sentUp.count({x, pkt}) == 0)) return false;
-    if (!(pktFwdr.count(pkt) > 0)) return false;
-    if (!(ndBuff.count({x, pkt}) > 0)) return false;
+    if (!(sentDown.count({x, pkt}) == 0))
+        return false;
+    if (!(sentUp.count({x, pkt}) == 0))
+        return false;
+    if (!(pktFwdr.count(pkt) > 0))
+        return false;
+    if (!(ndBuff.count({x, pkt}) > 0))
+        return false;
     sentDown.insert({x, pkt});
     pktFwdr[pkt] = x;
     ndBuff.erase({x, pkt});
@@ -282,7 +292,8 @@ bool Pm1App::start_tx(Node x, PktId pkt) {
 
 // Event-B: send_down — emitted under its SensorApp name (thesis S4, transmit).
 bool Pm1App::sendSensorPacket(Node x, PktId pkt) {
-    if (!(sentDown.count({x, pkt}) > 0)) return false;
+    if (!(sentDown.count({x, pkt}) > 0))
+        return false;
     // — SensorApp transmit structure (SensorApp::sendSensorPacket) —
     if (socket == nullptr || sinkAddress.isUnspecified()) {
         EV_WARN << "socket/sinkAddress not ready, skipping send\\n";
@@ -304,10 +315,14 @@ bool Pm1App::sendSensorPacket(Node x, PktId pkt) {
 
 // Event-B: send_up — emitted under its SensorApp name (thesis S5, receive).
 bool Pm1App::socketDataArrived(Node x, PktId pkt, const std::set<Node>& nbrs) {
-    if (!(sentUp.count({x, pkt}) == 0)) return false;
-    if (!(sentDown.count({x, pkt}) > 0)) return false;
-    if (!(ctlNeighbours.count(pkt) == 0)) return false;
-    if (!(!nbrs.empty())) return false;
+    if (!(sentUp.count({x, pkt}) == 0))
+        return false;
+    if (!(sentDown.count({x, pkt}) > 0))
+        return false;
+    if (!(ctlNeighbours.count(pkt) == 0))
+        return false;
+    if (!(!nbrs.empty()))
+        return false;
     // — SensorApp receive structure (accounting; the packet object itself
     //   is handled in socketDataArrived, which calls this event) —
     receivedCount++;
@@ -318,56 +333,78 @@ bool Pm1App::socketDataArrived(Node x, PktId pkt, const std::set<Node>& nbrs) {
 }
 
 bool Pm1App::receive(Node nb, PktId pkt) {
-    if (!(recvBuff.count({nb, pkt}) == 0)) return false;
-    if (!(sentUp.count({nb, pkt}) == 0)) return false;
-    if (!(sentDown.count({nb, pkt}) == 0)) return false;
+    if (!(recvBuff.count({nb, pkt}) == 0))
+        return false;
+    if (!(sentUp.count({nb, pkt}) == 0))
+        return false;
+    if (!(sentDown.count({nb, pkt}) == 0))
+        return false;
     recvBuff.insert({nb, pkt});
     ctlNeighbours[pkt].erase(nb); if (ctlNeighbours[pkt].empty()) ctlNeighbours.erase(pkt);
     return true;
 }
 
 bool Pm1App::clear_recvdBuff(Node nb, PktId pkt) {
-    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
-    if (!(clrRecvBuffFlg.count({nb, pkt}) > 0)) return false;
+    if (!(recvBuff.count({nb, pkt}) > 0))
+        return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) > 0))
+        return false;
     recvBuff.erase({nb, pkt});
     return true;
 }
 
 bool Pm1App::fwdr_receive_pkt(Node nb, PktId pkt) {
-    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
-    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0)) return false;
-    if (!(Dests.count(nb) == 0)) return false;
-    if (!(ndBuff.count({nb, pkt}) == 0)) return false;
+    if (!(recvBuff.count({nb, pkt}) > 0))
+        return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0))
+        return false;
+    if (!(Dests.count(nb) == 0))
+        return false;
+    if (!(ndBuff.count({nb, pkt}) == 0))
+        return false;
     clrRecvBuffFlg.insert({nb, pkt});
     ndBuff.insert({nb, pkt});
     return true;
 }
 
 bool Pm1App::dest_recv_pkt(Node nb, PktId pkt) {
-    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
-    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0)) return false;
-    if (!(destBuff.count({nb, pkt}) == 0)) return false;
+    if (!(recvBuff.count({nb, pkt}) > 0))
+        return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0))
+        return false;
+    if (!(destBuff.count({nb, pkt}) == 0))
+        return false;
     destBuff.insert({nb, pkt});
     clrRecvBuffFlg.insert({nb, pkt});
     return true;
 }
 
 bool Pm1App::finish_tx_pkt(Node x, PktId pkt) {
-    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty()))) return false;
-    if (!(inRan(sentUp, pkt))) return false;
-    if (!(!inRan(sentDown, pkt))) return false;
-    if (!(inDom(sentUp, x))) return false;
-    if (!(sentUp.count({x, pkt}) > 0)) return false;
-    if (!(inRan(ndBuff, pkt))) return false;
+    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty())))
+        return false;
+    if (!(inRan(sentUp, pkt)))
+        return false;
+    if (!(!inRan(sentDown, pkt)))
+        return false;
+    if (!(inDom(sentUp, x)))
+        return false;
+    if (!(sentUp.count({x, pkt}) > 0))
+        return false;
+    if (!(inRan(ndBuff, pkt)))
+        return false;
     sentUp.erase({x, pkt});
     return true;
 }
 
 bool Pm1App::final_tx_pkt(PktId pkt) {
-    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty()))) return false;
-    if (!(inRan(sentUp, pkt))) return false;
-    if (!(!inRan(sentDown, pkt))) return false;
-    if (!(!inRan(ndBuff, pkt))) return false;
+    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty())))
+        return false;
+    if (!(inRan(sentUp, pkt)))
+        return false;
+    if (!(!inRan(sentDown, pkt)))
+        return false;
+    if (!(!inRan(ndBuff, pkt)))
+        return false;
     for (auto it = sentUp.begin(); it != sentUp.end(); ) it->second == pkt ? it = sentUp.erase(it) : ++it;
     return true;
 }
@@ -674,24 +711,36 @@ void Pm3App::finish() {
 }
 
 bool Pm3App::sensing(Node x, bool sf, Data data) {
-    if (!((ND.count(x) > 0 && Dests.count(x) == 0))) return false;
-    if (!(ctlSensedFlg.count(x) > 0)) return false;
-    if (!(ctlSensedFlg.at(x) == FALSE)) return false;
+    if (!((ND.count(x) > 0 && Dests.count(x) == 0)))
+        return false;
+    if (!(ctlSensedFlg.count(x) > 0))
+        return false;
+    if (!(ctlSensedFlg.at(x) == FALSE))
+        return false;
     ctlSensedFlg[x] = sf;
     senseBuff[x].insert(data);
     return true;
 }
 
 bool Pm3App::creatingDataPacket(Node x, int des, PktId pkt, Data data) {
-    if (!((ND.count(x) > 0 && Dests.count(x) == 0))) return false;
-    if (!(x == initialSrcAddr.at(pkt))) return false;
-    if (!(des == finalDestAddr.at(pkt))) return false;
-    if (!(pktFwdr.count(pkt) == 0)) return false;
-    if (!(pktData.count(pkt) == 0)) return false;
-    if (!(ndBuff.count({x, pkt}) == 0)) return false;
-    if (!(type.at(pkt) == DATA)) return false;
-    if (!(!senseBuff.empty())) return false;
-    if (!((senseBuff.count(x) > 0 && senseBuff.at(x).count(data) > 0))) return false;
+    if (!((ND.count(x) > 0 && Dests.count(x) == 0)))
+        return false;
+    if (!(x == initialSrcAddr.at(pkt)))
+        return false;
+    if (!(des == finalDestAddr.at(pkt)))
+        return false;
+    if (!(pktFwdr.count(pkt) == 0))
+        return false;
+    if (!(pktData.count(pkt) == 0))
+        return false;
+    if (!(ndBuff.count({x, pkt}) == 0))
+        return false;
+    if (!(type.at(pkt) == DATA))
+        return false;
+    if (!(!senseBuff.empty()))
+        return false;
+    if (!((senseBuff.count(x) > 0 && senseBuff.at(x).count(data) > 0)))
+        return false;
     createdPkts.insert(pkt);
     pktFwdr[pkt] = x;
     pktData[pkt] = data;
@@ -701,14 +750,22 @@ bool Pm3App::creatingDataPacket(Node x, int des, PktId pkt, Data data) {
 }
 
 bool Pm3App::creatingControlPacket(Node x, int des, PktId pkt, Data data) {
-    if (!((ND.count(x) > 0 && Dests.count(x) == 0))) return false;
-    if (!(x == initialSrcAddr.at(pkt))) return false;
-    if (!(des == finalDestAddr.at(pkt))) return false;
-    if (!(pktFwdr.count(pkt) == 0)) return false;
-    if (!(pktData.count(pkt) == 0)) return false;
-    if (!(ndBuff.count({x, pkt}) == 0)) return false;
-    if (!(data == CTL_VAL)) return false;
-    if (!(CONTROL.count(type.at(pkt)) > 0)) return false;
+    if (!((ND.count(x) > 0 && Dests.count(x) == 0)))
+        return false;
+    if (!(x == initialSrcAddr.at(pkt)))
+        return false;
+    if (!(des == finalDestAddr.at(pkt)))
+        return false;
+    if (!(pktFwdr.count(pkt) == 0))
+        return false;
+    if (!(pktData.count(pkt) == 0))
+        return false;
+    if (!(ndBuff.count({x, pkt}) == 0))
+        return false;
+    if (!(data == CTL_VAL))
+        return false;
+    if (!(CONTROL.count(type.at(pkt)) > 0))
+        return false;
     createdPkts.insert(pkt);
     pktFwdr[pkt] = x;
     pktData[pkt] = data;
@@ -717,10 +774,14 @@ bool Pm3App::creatingControlPacket(Node x, int des, PktId pkt, Data data) {
 }
 
 bool Pm3App::start_tx(Node x, PktId pkt) {
-    if (!(sentDown.count({x, pkt}) == 0)) return false;
-    if (!(sentUp.count({x, pkt}) == 0)) return false;
-    if (!(pktFwdr.count(pkt) > 0)) return false;
-    if (!(ndBuff.count({x, pkt}) > 0)) return false;
+    if (!(sentDown.count({x, pkt}) == 0))
+        return false;
+    if (!(sentUp.count({x, pkt}) == 0))
+        return false;
+    if (!(pktFwdr.count(pkt) > 0))
+        return false;
+    if (!(ndBuff.count({x, pkt}) > 0))
+        return false;
     sentDown.insert({x, pkt});
     pktFwdr[pkt] = x;
     ndBuff.erase({x, pkt});
@@ -729,7 +790,8 @@ bool Pm3App::start_tx(Node x, PktId pkt) {
 
 // Event-B: send_down — emitted under its SensorApp name (thesis S4, transmit).
 bool Pm3App::sendSensorPacket(Node x, PktId pkt) {
-    if (!(sentDown.count({x, pkt}) > 0)) return false;
+    if (!(sentDown.count({x, pkt}) > 0))
+        return false;
     // — SensorApp transmit structure (SensorApp::sendSensorPacket) —
     if (socket == nullptr || sinkAddress.isUnspecified()) {
         EV_WARN << "socket/sinkAddress not ready, skipping send\\n";
@@ -751,10 +813,14 @@ bool Pm3App::sendSensorPacket(Node x, PktId pkt) {
 
 // Event-B: send_up — emitted under its SensorApp name (thesis S5, receive).
 bool Pm3App::socketDataArrived(Node x, PktId pkt, const std::set<Node>& nbrs) {
-    if (!(sentUp.count({x, pkt}) == 0)) return false;
-    if (!(sentDown.count({x, pkt}) > 0)) return false;
-    if (!(ctlNeighbours.count(pkt) == 0)) return false;
-    if (!(!nbrs.empty())) return false;
+    if (!(sentUp.count({x, pkt}) == 0))
+        return false;
+    if (!(sentDown.count({x, pkt}) > 0))
+        return false;
+    if (!(ctlNeighbours.count(pkt) == 0))
+        return false;
+    if (!(!nbrs.empty()))
+        return false;
     // — SensorApp receive structure (accounting; the packet object itself
     //   is handled in socketDataArrived, which calls this event) —
     receivedCount++;
@@ -765,56 +831,78 @@ bool Pm3App::socketDataArrived(Node x, PktId pkt, const std::set<Node>& nbrs) {
 }
 
 bool Pm3App::receive(Node nb, PktId pkt) {
-    if (!(recvBuff.count({nb, pkt}) == 0)) return false;
-    if (!(sentUp.count({nb, pkt}) == 0)) return false;
-    if (!(sentDown.count({nb, pkt}) == 0)) return false;
+    if (!(recvBuff.count({nb, pkt}) == 0))
+        return false;
+    if (!(sentUp.count({nb, pkt}) == 0))
+        return false;
+    if (!(sentDown.count({nb, pkt}) == 0))
+        return false;
     recvBuff.insert({nb, pkt});
     ctlNeighbours[pkt].erase(nb); if (ctlNeighbours[pkt].empty()) ctlNeighbours.erase(pkt);
     return true;
 }
 
 bool Pm3App::clear_recvdBuff(Node nb, PktId pkt) {
-    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
-    if (!(clrRecvBuffFlg.count({nb, pkt}) > 0)) return false;
+    if (!(recvBuff.count({nb, pkt}) > 0))
+        return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) > 0))
+        return false;
     recvBuff.erase({nb, pkt});
     return true;
 }
 
 bool Pm3App::fwdr_receive_pkt(Node nb, PktId pkt) {
-    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
-    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0)) return false;
-    if (!(Dests.count(nb) == 0)) return false;
-    if (!(ndBuff.count({nb, pkt}) == 0)) return false;
+    if (!(recvBuff.count({nb, pkt}) > 0))
+        return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0))
+        return false;
+    if (!(Dests.count(nb) == 0))
+        return false;
+    if (!(ndBuff.count({nb, pkt}) == 0))
+        return false;
     clrRecvBuffFlg.insert({nb, pkt});
     ndBuff.insert({nb, pkt});
     return true;
 }
 
 bool Pm3App::dest_recv_pkt(Node nb, PktId pkt) {
-    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
-    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0)) return false;
-    if (!(destBuff.count({nb, pkt}) == 0)) return false;
+    if (!(recvBuff.count({nb, pkt}) > 0))
+        return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0))
+        return false;
+    if (!(destBuff.count({nb, pkt}) == 0))
+        return false;
     destBuff.insert({nb, pkt});
     clrRecvBuffFlg.insert({nb, pkt});
     return true;
 }
 
 bool Pm3App::finish_tx_pkt(Node x, PktId pkt) {
-    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty()))) return false;
-    if (!(inRan(sentUp, pkt))) return false;
-    if (!(!inRan(sentDown, pkt))) return false;
-    if (!(inDom(sentUp, x))) return false;
-    if (!(sentUp.count({x, pkt}) > 0)) return false;
-    if (!(inRan(ndBuff, pkt))) return false;
+    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty())))
+        return false;
+    if (!(inRan(sentUp, pkt)))
+        return false;
+    if (!(!inRan(sentDown, pkt)))
+        return false;
+    if (!(inDom(sentUp, x)))
+        return false;
+    if (!(sentUp.count({x, pkt}) > 0))
+        return false;
+    if (!(inRan(ndBuff, pkt)))
+        return false;
     sentUp.erase({x, pkt});
     return true;
 }
 
 bool Pm3App::final_tx_pkt(PktId pkt) {
-    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty()))) return false;
-    if (!(inRan(sentUp, pkt))) return false;
-    if (!(!inRan(sentDown, pkt))) return false;
-    if (!(!inRan(ndBuff, pkt))) return false;
+    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty())))
+        return false;
+    if (!(inRan(sentUp, pkt)))
+        return false;
+    if (!(!inRan(sentDown, pkt)))
+        return false;
+    if (!(!inRan(ndBuff, pkt)))
+        return false;
     for (auto it = sentUp.begin(); it != sentUp.end(); ) it->second == pkt ? it = sentUp.erase(it) : ++it;
     return true;
 }
@@ -1116,14 +1204,22 @@ void Um2App::finish() {
 }
 
 bool Um2App::creatingControlPacket(Node x, int des, PktId pkt, Data data) {
-    if (!((ND.count(x) > 0 && Dests.count(x) == 0))) return false;
-    if (!(x == initialSrcAddr.at(pkt))) return false;
-    if (!(des == finalDestAddr.at(pkt))) return false;
-    if (!(pktFwdr.count(pkt) == 0)) return false;
-    if (!(pktData.count(pkt) == 0)) return false;
-    if (!(ndBuff.count({x, pkt}) == 0)) return false;
-    if (!(data == CTL_VAL)) return false;
-    if (!(CONTROL.count(type.at(pkt)) > 0)) return false;
+    if (!((ND.count(x) > 0 && Dests.count(x) == 0)))
+        return false;
+    if (!(x == initialSrcAddr.at(pkt)))
+        return false;
+    if (!(des == finalDestAddr.at(pkt)))
+        return false;
+    if (!(pktFwdr.count(pkt) == 0))
+        return false;
+    if (!(pktData.count(pkt) == 0))
+        return false;
+    if (!(ndBuff.count({x, pkt}) == 0))
+        return false;
+    if (!(data == CTL_VAL))
+        return false;
+    if (!(CONTROL.count(type.at(pkt)) > 0))
+        return false;
     createdPkts.insert(pkt);
     pktFwdr[pkt] = x;
     pktData[pkt] = data;
@@ -1132,10 +1228,14 @@ bool Um2App::creatingControlPacket(Node x, int des, PktId pkt, Data data) {
 }
 
 bool Um2App::start_tx(Node x, PktId pkt) {
-    if (!(sentDown.count({x, pkt}) == 0)) return false;
-    if (!(sentUp.count({x, pkt}) == 0)) return false;
-    if (!(pktFwdr.count(pkt) > 0)) return false;
-    if (!(ndBuff.count({x, pkt}) > 0)) return false;
+    if (!(sentDown.count({x, pkt}) == 0))
+        return false;
+    if (!(sentUp.count({x, pkt}) == 0))
+        return false;
+    if (!(pktFwdr.count(pkt) > 0))
+        return false;
+    if (!(ndBuff.count({x, pkt}) > 0))
+        return false;
     sentDown.insert({x, pkt});
     pktFwdr[pkt] = x;
     ndBuff.erase({x, pkt});
@@ -1144,7 +1244,8 @@ bool Um2App::start_tx(Node x, PktId pkt) {
 
 // Event-B: send_down — emitted under its SensorApp name (thesis S4, transmit).
 bool Um2App::sendSensorPacket(Node x, PktId pkt) {
-    if (!(sentDown.count({x, pkt}) > 0)) return false;
+    if (!(sentDown.count({x, pkt}) > 0))
+        return false;
     // — SensorApp transmit structure (SensorApp::sendSensorPacket) —
     if (socket == nullptr || sinkAddress.isUnspecified()) {
         EV_WARN << "socket/sinkAddress not ready, skipping send\\n";
@@ -1166,10 +1267,14 @@ bool Um2App::sendSensorPacket(Node x, PktId pkt) {
 
 // Event-B: send_up — emitted under its SensorApp name (thesis S5, receive).
 bool Um2App::socketDataArrived(Node x, PktId pkt, const std::set<Node>& nbrs) {
-    if (!(sentUp.count({x, pkt}) == 0)) return false;
-    if (!(sentDown.count({x, pkt}) > 0)) return false;
-    if (!(ctlNeighbours.count(pkt) == 0)) return false;
-    if (!(!nbrs.empty())) return false;
+    if (!(sentUp.count({x, pkt}) == 0))
+        return false;
+    if (!(sentDown.count({x, pkt}) > 0))
+        return false;
+    if (!(ctlNeighbours.count(pkt) == 0))
+        return false;
+    if (!(!nbrs.empty()))
+        return false;
     // — SensorApp receive structure (accounting; the packet object itself
     //   is handled in socketDataArrived, which calls this event) —
     receivedCount++;
@@ -1180,68 +1285,97 @@ bool Um2App::socketDataArrived(Node x, PktId pkt, const std::set<Node>& nbrs) {
 }
 
 bool Um2App::receive(Node nb, PktId pkt) {
-    if (!(recvBuff.count({nb, pkt}) == 0)) return false;
-    if (!(sentUp.count({nb, pkt}) == 0)) return false;
-    if (!(sentDown.count({nb, pkt}) == 0)) return false;
+    if (!(recvBuff.count({nb, pkt}) == 0))
+        return false;
+    if (!(sentUp.count({nb, pkt}) == 0))
+        return false;
+    if (!(sentDown.count({nb, pkt}) == 0))
+        return false;
     recvBuff.insert({nb, pkt});
     ctlNeighbours[pkt].erase(nb); if (ctlNeighbours[pkt].empty()) ctlNeighbours.erase(pkt);
     return true;
 }
 
 bool Um2App::clear_recvdBuff(Node nb, PktId pkt) {
-    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
-    if (!(clrRecvBuffFlg.count({nb, pkt}) > 0)) return false;
+    if (!(recvBuff.count({nb, pkt}) > 0))
+        return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) > 0))
+        return false;
     recvBuff.erase({nb, pkt});
     return true;
 }
 
 bool Um2App::fwdr_receive_pkt(Node nb, PktId pkt) {
-    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
-    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0)) return false;
-    if (!(Dests.count(nb) == 0)) return false;
-    if (!(ndBuff.count({nb, pkt}) == 0)) return false;
+    if (!(recvBuff.count({nb, pkt}) > 0))
+        return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0))
+        return false;
+    if (!(Dests.count(nb) == 0))
+        return false;
+    if (!(ndBuff.count({nb, pkt}) == 0))
+        return false;
     clrRecvBuffFlg.insert({nb, pkt});
     ndBuff.insert({nb, pkt});
     return true;
 }
 
 bool Um2App::dest_recv_pkt(Node nb, PktId pkt) {
-    if (!(recvBuff.count({nb, pkt}) > 0)) return false;
-    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0)) return false;
-    if (!(destBuff.count({nb, pkt}) == 0)) return false;
+    if (!(recvBuff.count({nb, pkt}) > 0))
+        return false;
+    if (!(clrRecvBuffFlg.count({nb, pkt}) == 0))
+        return false;
+    if (!(destBuff.count({nb, pkt}) == 0))
+        return false;
     destBuff.insert({nb, pkt});
     clrRecvBuffFlg.insert({nb, pkt});
     return true;
 }
 
 bool Um2App::finish_tx_pkt(Node x, PktId pkt) {
-    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty()))) return false;
-    if (!(inRan(sentUp, pkt))) return false;
-    if (!(!inRan(sentDown, pkt))) return false;
-    if (!(inDom(sentUp, x))) return false;
-    if (!(sentUp.count({x, pkt}) > 0)) return false;
-    if (!(inRan(ndBuff, pkt))) return false;
+    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty())))
+        return false;
+    if (!(inRan(sentUp, pkt)))
+        return false;
+    if (!(!inRan(sentDown, pkt)))
+        return false;
+    if (!(inDom(sentUp, x)))
+        return false;
+    if (!(sentUp.count({x, pkt}) > 0))
+        return false;
+    if (!(inRan(ndBuff, pkt)))
+        return false;
     sentUp.erase({x, pkt});
     return true;
 }
 
 bool Um2App::final_tx_pkt(PktId pkt) {
-    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty()))) return false;
-    if (!(inRan(sentUp, pkt))) return false;
-    if (!(!inRan(sentDown, pkt))) return false;
-    if (!(!inRan(ndBuff, pkt))) return false;
+    if (!((ctlNeighbours.count(pkt) == 0 || ctlNeighbours.at(pkt).empty())))
+        return false;
+    if (!(inRan(sentUp, pkt)))
+        return false;
+    if (!(!inRan(sentDown, pkt)))
+        return false;
+    if (!(!inRan(ndBuff, pkt)))
+        return false;
     for (auto it = sentUp.begin(); it != sentUp.end(); ) it->second == pkt ? it = sentUp.erase(it) : ++it;
     return true;
 }
 
 bool Um2App::creatingDataPacket(Node x, int des, PktId pkt, Data data) {
-    if (!((ND.count(x) > 0 && Dests.count(x) == 0))) return false;
-    if (!(x == initialSrcAddr.at(pkt))) return false;
-    if (!(des == finalDestAddr.at(pkt))) return false;
-    if (!(pktFwdr.count(pkt) == 0)) return false;
-    if (!(pktData.count(pkt) == 0)) return false;
-    if (!(ndBuff.count({x, pkt}) == 0)) return false;
-    if (!(type.at(pkt) == DATA)) return false;
+    if (!((ND.count(x) > 0 && Dests.count(x) == 0)))
+        return false;
+    if (!(x == initialSrcAddr.at(pkt)))
+        return false;
+    if (!(des == finalDestAddr.at(pkt)))
+        return false;
+    if (!(pktFwdr.count(pkt) == 0))
+        return false;
+    if (!(pktData.count(pkt) == 0))
+        return false;
+    if (!(ndBuff.count({x, pkt}) == 0))
+        return false;
+    if (!(type.at(pkt) == DATA))
+        return false;
     createdPkts.insert(pkt);
     pktFwdr[pkt] = x;
     pktData[pkt] = data;

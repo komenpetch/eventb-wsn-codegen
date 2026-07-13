@@ -77,12 +77,19 @@ const RECEIVE_BLOCK = [
   "    receivedCount++;",
 ];
 
-export function emit(model: EncodedMachine, name: string): GeneratedTree {
+// Emitted-structure version, kept selectable for the project report's
+// compare table: 1 = the original pre-SensorApp structure (RoutingProtocolBase
+// + empty stubs, pattern pair untouched); 2 = v1 with ONLY the CommPattern
+// pair changed to the merged SensorApp functions (plus the minimal members
+// those bodies need); 3 = the full SensorApp shell (default).
+export type EmitVersion = 1 | 2 | 3;
+
+export function emit(model: EncodedMachine, name: string, version: EmitVersion = 3): GeneratedTree {
   const fields = [...model.encodings.entries()]
     .map(([id, form]) => `    ${cppType(form, model.variableTypes.get(id))} ${id};`).join("\n");
 
-  const hasSendDown = model.events.some((e) => e.label === "send_down");
-  const hasSendUp = model.events.some((e) => e.label === "send_up");
+  const hasSendDown = version >= 2 && model.events.some((e) => e.label === "send_down");
+  const hasSendUp = version >= 2 && model.events.some((e) => e.label === "send_up");
 
   const decls: string[] = [];
   const defs: string[] = [];
@@ -91,8 +98,9 @@ export function emit(model: EncodedMachine, name: string): GeneratedTree {
     const t = translateEvent(raw, model);
     // The CommPattern pair is emitted under its SensorApp name (thesis S4/S5);
     // the Event-B label is kept as provenance so the model stays traceable.
-    const inetName =
-      raw.label === "send_down" ? "sendSensorPacket"
+    // (v1 keeps the Event-B names and bodies untouched.)
+    const inetName = version < 2 ? undefined
+      : raw.label === "send_down" ? "sendSensorPacket"
       : raw.label === "send_up" ? "socketDataArrived"
       : undefined;
     const cppName = inetName ?? t.label;
@@ -108,8 +116,8 @@ export function emit(model: EncodedMachine, name: string): GeneratedTree {
     // the precondition, omitting an action silently weakens the effect.
     const noteG = t.untranslatedGuards.map((g) => `    // UNTRANSLATED GUARD: ${g}`);
     const noteA = t.untranslatedActions.map((a) => `    // UNTRANSLATED ACTION: ${a}`);
-    const inject =
-      raw.label === "send_down" ? TRANSMIT_BLOCK
+    const inject = version < 2 ? []
+      : raw.label === "send_down" ? TRANSMIT_BLOCK
       : raw.label === "send_up" ? RECEIVE_BLOCK
       : [];
     if (inject.length === 0 && t.actions.length === 0 && noteA.length === 0) {
@@ -118,7 +126,8 @@ export function emit(model: EncodedMachine, name: string): GeneratedTree {
       defs.push(`${prov}bool ${name}::${cppName}(${params(raw)}) {\n${body}\n}`);
     } else {
       const body = [
-        ...t.guards.map((g) => `    if (!(${g})) return false;`),
+        // Each guard early-return on its own indented line for readability.
+        ...t.guards.map((g) => `    if (!(${g}))\n        return false;`),
         ...noteG,
         ...inject,
         ...t.actions.map((a) => `    ${a}`),
@@ -148,6 +157,99 @@ export function emit(model: EncodedMachine, name: string): GeneratedTree {
 Do not edit by hand — regenerate instead.`;
   const cxxBanner = banner.split("\n").map((l) => `// ${l}`).join("\n");
 
+  // ── v1/v2 output: the original RoutingProtocolBase structure ──
+  // v2 differs from v1 only in the CommPattern pair (renamed + merged above)
+  // and the minimal members/includes those two bodies need.
+  const v2Includes = version === 2 ? `
+#include "inet/common/Protocol.h"
+#include "inet/common/packet/Packet.h"
+#include "inet/networklayer/common/L3Address.h"
+#include "inet/networklayer/contract/INetworkSocket.h"` : "";
+  const v2Members = version === 2 ? `
+
+    // Minimal SensorApp members used by the merged pair (v2); the full
+    // SensorApp shell (v3) reads these from NED parameters instead.
+    L3Address sinkAddress;
+    int payloadLength = 10;
+    INetworkSocket *socket = nullptr;
+    long sendSeqNo = 0;
+    long sentCount = 0;
+    long receivedCount = 0;
+    static simsignal_t packetSentSignal;
+    static simsignal_t packetReceivedSignal;` : "";
+
+  const headerV12 = `${cxxBanner}
+#pragma once
+#include <map>
+#include <set>
+#include <utility>
+#include "eb_helpers.h"
+#include "eb_context.h"
+#include "inet/routing/base/RoutingProtocolBase.h"${v2Includes}
+
+using namespace inet;
+
+class ${name} : public RoutingProtocolBase {
+  protected:
+${fields}${v2Members}
+
+    // OperationalBase pure virtuals — empty stubs keep the module concrete.
+    // Message dispatch to the event methods below is integrator-supplied.
+    void handleMessageWhenUp(cMessage *msg) override { delete msg; }
+    void handleStartOperation(LifecycleOperation *op) override {}
+    void handleStopOperation(LifecycleOperation *op) override {}
+    void handleCrashOperation(LifecycleOperation *op) override {}
+
+    // Event-B events, one guarded bool method each: the guards are checked
+    // first (early return), then the actions run.
+${decls.join("\n")}
+
+  public:
+    ${name}();
+};
+`;
+
+  const sourceV12 = `${cxxBanner}
+#include "${name}.h"
+${version === 2 ? `
+#include "inet/common/ProtocolTag_m.h"
+#include "inet/common/packet/chunk/ByteCountChunk.h"
+#include "inet/networklayer/common/L3AddressTag_m.h"
+` : ""}
+Define_Module(${name});
+${version === 2 ? `
+simsignal_t ${name}::packetSentSignal = registerSignal("packetSent");
+simsignal_t ${name}::packetReceivedSignal = registerSignal("packetReceived");
+` : ""}
+${name}::${name}() {
+${ctorBody}
+}
+
+${defs.join("\n\n")}
+`;
+
+  // RoutingProtocolBase is a C++-only base (no NED type in INET 4.5), so the
+  // module is declared standalone and bound to the class via @class.
+  const nedV12 = `import inet.applications.contract.IApp;
+
+//
+// ${name} — ${banner.split("\n").join("\n// ")}
+// The C++ class binds via @class below; its base inet::RoutingProtocolBase
+// has no NED type of its own in INET 4.5.
+//
+simple ${name} like IApp
+{
+    parameters:
+        @class(${name});
+        @display("i=block/app");
+        @lifecycleSupport;
+    gates:
+        input socketIn @labels(UdpControlInfo/up);
+        output socketOut @labels(UdpControlInfo/down);
+}
+`;
+
+  // ── v3 output (default): the full SensorApp shell ──
   const header = `${cxxBanner}
 #pragma once
 #include <map>
@@ -438,9 +540,15 @@ simple ${name} like IApp
 }
 `;
 
-  return [
-    { path: `${name}.h`, content: header },
-    { path: `${name}.cc`, content: source },
-    { path: `${name}.ned`, content: ned },
-  ];
+  return version === 3
+    ? [
+        { path: `${name}.h`, content: header },
+        { path: `${name}.cc`, content: source },
+        { path: `${name}.ned`, content: ned },
+      ]
+    : [
+        { path: `${name}.h`, content: headerV12 },
+        { path: `${name}.cc`, content: sourceV12 },
+        { path: `${name}.ned`, content: nedV12 },
+      ];
 }

@@ -2,7 +2,7 @@ import type { GeneratedTree, RawModel } from "./types";
 import { parseModel } from "./parser";
 import { flatten } from "./flattener";
 import { resolveEncodings } from "./encodingResolver";
-import { emit } from "./codeEmitter";
+import { emit, type EmitVersion } from "./codeEmitter";
 
 export type EbFiles = { name: string; xml: string }[];
 
@@ -65,16 +65,16 @@ export function leafMachine(files: EbFiles): string {
 
 // Generate one class for a single target machine, flattened over its refines
 // chain (base first). `outputName` is the emitted class/file name.
-export function generate(files: EbFiles, target: string, outputName: string): GeneratedTree {
-  return emit(resolveEncodings(flatten(parsedMachines(files), target)), outputName);
+export function generate(files: EbFiles, target: string, outputName: string, version: EmitVersion = 3): GeneratedTree {
+  return emit(resolveEncodings(flatten(parsedMachines(files), target)), outputName, version);
 }
 
 // Merge the whole project into ONE module: generate from the most-refined
 // machine, whose flattened form subsumes the entire refinement chain. Emits
 // exactly three files (<name>.h/.cc/.ned). `outputName` defaults to the leaf's
-// derived name.
-export function generateMerged(files: EbFiles, outputName?: string): GeneratedTree {
+// derived name. `version` selects the emitted structure (see EmitVersion).
+export function generateMerged(files: EbFiles, outputName?: string, version: EmitVersion = 3): GeneratedTree {
   const raw = parsedMachines(files);
   const leaf = leafOf(raw);
-  return emit(resolveEncodings(flatten(raw, leaf)), outputName ?? defaultName(leaf));
+  return emit(resolveEncodings(flatten(raw, leaf)), outputName ?? defaultName(leaf), version);
 }
