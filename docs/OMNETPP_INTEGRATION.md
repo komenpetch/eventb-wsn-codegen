@@ -17,14 +17,15 @@ npm run generate -- <inputDir> <outDir>    # every machine found → <outDir>
 npm run generate                           # tests/fixtures/shdecom → out/
 ```
 
-The class is a working **SensorApp-shaped shell**: `handleMessageWhenUp` dispatches the sensing
-timer into `sendDown()` (the `SensorApp::sendSensorPacket` shape) and socket messages into
-`sendUp()` via `socketDataArrived`; the lifecycle handlers open/close an `L3Socket` bound to the
-`networkProtocol` NED parameter; the public constructor is seeded from `INITIALISATION`. The
-**hand-completed next step** is wiring the generated `bool` event methods into the two marked
-`EXTENSION POINT` comments (send-down flow in `sendDown()`, send-up flow in `sendUp()`); the
-generator produces the shell and the per-event guard/action logic, not the packet-dispatch
-decisions.
+The class is a working **SensorApp-shaped shell** keeping SensorApp's own function names:
+`handleMessageWhenUp` dispatches the sensing timer into `sendSensorPacket()` (the send-down flow)
+and socket messages into `socketDataArrived()` (the send-up flow); the lifecycle handlers
+open/close an `L3Socket` bound to the `networkProtocol` NED parameter; the public constructor is
+seeded from `INITIALISATION`. A model's own `send_down`/`send_up` events remain guarded `bool`
+event methods — no collision with the shell. The **hand-completed next step** is wiring the
+generated `bool` event methods into the two marked `EXTENSION POINT` comments (send-down flow in
+`sendSensorPacket()`, send-up flow in `socketDataArrived()`); the generator produces the shell and
+the per-event guard/action logic, not the packet-dispatch decisions.
 
 ## Toolchain on this machine
 
@@ -55,9 +56,10 @@ export macros mis-expand). **Status: the merged module passes, exit 0.** See
 Executing in the simulator (the "and executes" half of Form 01 §6) requires two hand-authored
 pieces the app-layer generator does not emit:
 
-1. **The extension-point wiring** — inside the generated `sendDown()` / `sendUp()`, decide which
-   `bool` event methods fire on which packets (the protocol-specific dispatch). The shell itself —
-   timer, socket, `handleMessageWhenUp` dispatch, lifecycle — is already generated.
+1. **The extension-point wiring** — inside the generated `sendSensorPacket()` /
+   `socketDataArrived()`, decide which `bool` event methods fire on which packets (the
+   protocol-specific dispatch). The shell itself — timer, socket, `handleMessageWhenUp` dispatch,
+   lifecycle — is already generated.
 2. **A simulation to host the module** — a network `.ned` that instantiates `<Name>` as `app[0]`
    on the nodes (it is an `IApp`), and an `omnetpp.ini` `[Config]` setting `sinkAddress` /
    `networkProtocol`.

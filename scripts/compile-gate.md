@@ -42,12 +42,14 @@ The merged module passes `-fsyntax-only` (exit 0):
 | shDecom6_2 (pM1→uM2→pM3) | pM3 (leaf) | `Pm3App.{h,cc,ned}` | ✓ exit 0 |
 
 The generated class is an `inet::ApplicationBase` subclass shaped like INET's
-`SensorApp` (`inet/applications/sensorapp`): `handleMessageWhenUp` dispatches
-the sensing timer into `sendDown()` and socket messages into `sendUp()` via
-`socketDataArrived`; lifecycle handlers open/close an `L3Socket`. Each Event-B
-event becomes a guarded `bool` method; wiring those methods into the two marked
-`EXTENSION POINT` comments is the documented next step beyond this
-application-layer generator.
+`SensorApp` (`inet/applications/sensorapp`), keeping SensorApp's own function
+names: `handleMessageWhenUp` dispatches the sensing timer into
+`sendSensorPacket()` (send-down flow) and socket messages into
+`socketDataArrived()` (send-up flow); lifecycle handlers open/close an
+`L3Socket`. Each Event-B event becomes a guarded `bool` method (a model's own
+`send_down`/`send_up` events included — no shell-name collision); wiring those
+methods into the two marked `EXTENSION POINT` comments is the documented next
+step beyond this application-layer generator.
 
 (2026-07-01 result under the previous `RoutingProtocolBase` empty-stub shell:
 same gate, exit 0.)

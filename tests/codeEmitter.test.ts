@@ -48,23 +48,28 @@ describe("codeEmitter", () => {
     expect(h).toContain("void handleMessageWhenUp(cMessage *msg) override;");
     expect(h).not.toContain("RoutingProtocolBase");
   });
-  it("emits the send-down path shaped like SensorApp::sendSensorPacket", () => {
+  it("emits SensorApp's own send function, no invented shell names", () => {
     const cc = file("cc");
-    expect(cc).toContain("void Pm1App::sendDown()");
+    expect(cc).toContain("void Pm1App::sendSensorPacket()");
     expect(cc).toContain("packet->addTag<L3AddressReq>()->setDestAddress(sinkAddress);");
     expect(cc).toContain("emit(packetSentSignal, packet);");
     expect(cc).toContain("socket->send(packet);");
+    // The model's send_down/send_up bool event methods are the ONLY send pair
+    // beyond SensorApp's: the shell must not add a colliding sendDown/sendUp.
+    expect(cc).not.toMatch(/void Pm1App::sendDown\(/);
+    expect(cc).not.toMatch(/void Pm1App::sendUp\(/);
   });
-  it("emits the send-up path: socketDataArrived delivers into sendUp", () => {
+  it("receives in socketDataArrived directly, as SensorApp does", () => {
     const cc = file("cc");
-    expect(cc).toContain("void Pm1App::sendUp(Packet *packet)");
-    expect(cc).toMatch(/void Pm1App::socketDataArrived\([^)]*\)\s*\{\s*sendUp\(packet\);\s*\}/);
-    expect(cc).toContain("emit(packetReceivedSignal, packet);");
+    const body = cc.slice(cc.indexOf("void Pm1App::socketDataArrived"));
+    expect(body).toContain("receivedCount++;");
+    expect(body).toContain("emit(packetReceivedSignal, packet);");
+    expect(body).toContain("delete packet;");
   });
-  it("dispatches in handleMessageWhenUp: timer → sendDown, socket msg → receive path", () => {
+  it("dispatches in handleMessageWhenUp: timer → sendSensorPacket, socket msg → receive path", () => {
     const cc = file("cc");
     const body = cc.slice(cc.indexOf("void Pm1App::handleMessageWhenUp"));
-    expect(body).toContain("sendDown();");
+    expect(body).toContain("sendSensorPacket();");
     expect(body).toContain("scheduleNextSensing(simTime());");
     expect(body).toContain("socket->processMessage(msg);");
   });

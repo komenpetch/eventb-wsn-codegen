@@ -115,11 +115,12 @@ Do not edit by hand — regenerate instead.`;
 
 using namespace inet;
 
-// Module shell modelled on INET's SensorApp (inet/applications/sensorapp):
-// a periodic timer drives sendDown() — the SensorApp::sendSensorPacket shape —
-// and packets the network layer sends up arrive through socketDataArrived()
-// into sendUp(). The Event-B state and guarded event methods plug into that
-// shell at the marked extension points.
+// Module shell modelled on INET's SensorApp (inet/applications/sensorapp),
+// keeping SensorApp's own function names: a periodic timer drives
+// sendSensorPacket() (the send-down flow) and packets the network layer sends
+// up arrive through socketDataArrived() (the send-up flow). The Event-B state
+// and guarded event methods — including the model's own send_down/send_up
+// events, when present — plug into that shell at the marked extension points.
 class ${name} : public ApplicationBase, public INetworkSocket::ICallback {
   protected:
     // ── Event-B machine state ──
@@ -150,12 +151,11 @@ ${fields}
     void finish() override;
     void refreshDisplay() const override;
 
-    // Packet flow, named after the Event-B CommPattern send-down / send-up
-    // flows and shaped like SensorApp: sendDown() builds one packet and hands
-    // it down to the network layer; sendUp() consumes one delivered packet.
+    // Packet flow, SensorApp's own functions: sendSensorPacket() builds one
+    // packet and hands it down to the network layer (send-down flow); the
+    // send-up flow is received in socketDataArrived() below.
     virtual void openSocket();
-    virtual void sendDown();
-    virtual void sendUp(Packet *packet);
+    virtual void sendSensorPacket();
     virtual void scheduleNextSensing(simtime_t previous);
     virtual void cancelNextSensing();
     virtual bool isEnabled();
@@ -242,9 +242,9 @@ void ${name}::openSocket() {
     socket->setCallback(this);
 }
 
-// Send-down flow (SensorApp::sendSensorPacket shape): build one packet and
-// hand it down to the network layer through the socket.
-void ${name}::sendDown() {
+// Send-down flow: build one packet and hand it down to the network layer
+// through the socket (same as SensorApp).
+void ${name}::sendSensorPacket() {
     if (sinkAddress.isUnspecified() || socket == nullptr) {
         EV_WARN << "sinkAddress unspecified, skipping send\\n";
         return;
@@ -267,18 +267,6 @@ void ${name}::sendDown() {
     sentCount++;
 }
 
-// Send-up flow (SensorApp receive path): a packet the network layer sent up
-// arrives here via handleMessageWhenUp → socket → socketDataArrived.
-void ${name}::sendUp(Packet *packet) {
-    // EXTENSION POINT (send-up flow): dispatch to the generated Event-B
-    // receive-side event methods declared above.
-
-    EV_INFO << "received " << packet->getByteLength() << "B\\n";
-    receivedCount++;
-    emit(packetReceivedSignal, packet);
-    delete packet;
-}
-
 void ${name}::scheduleNextSensing(simtime_t previous) {
     simtime_t next;
     if (previous < SIMTIME_ZERO)
@@ -296,11 +284,11 @@ void ${name}::cancelNextSensing() {
 void ${name}::handleMessageWhenUp(cMessage *msg) {
     if (msg->isSelfMessage()) {
         ASSERT(msg == timer);
-        sendDown();
+        sendSensorPacket();
         scheduleNextSensing(simTime());
     }
     else if (socket && socket->belongsToSocket(msg)) {
-        socket->processMessage(msg);   // delivered to sendUp via socketDataArrived
+        socket->processMessage(msg);   // delivered to socketDataArrived
     }
     else {
         EV_WARN << "dropping unaccepted message " << msg->getName() << "\\n";
@@ -308,8 +296,16 @@ void ${name}::handleMessageWhenUp(cMessage *msg) {
     }
 }
 
+// Send-up flow: a packet the network layer sent up arrives here via
+// handleMessageWhenUp → socket (same as SensorApp).
 void ${name}::socketDataArrived(INetworkSocket *, Packet *packet) {
-    sendUp(packet);
+    // EXTENSION POINT (send-up flow): dispatch to the generated Event-B
+    // receive-side event methods declared above.
+
+    EV_INFO << "received " << packet->getByteLength() << "B\\n";
+    receivedCount++;
+    emit(packetReceivedSignal, packet);
+    delete packet;
 }
 
 void ${name}::socketClosed(INetworkSocket *) {}
