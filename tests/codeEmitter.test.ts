@@ -4,6 +4,27 @@ import { parseModel } from "../src/engine/parser";
 import { flatten } from "../src/engine/flattener";
 import { resolveEncodings } from "../src/engine/encodingResolver";
 import { emit } from "../src/engine/codeEmitter";
+import type { EncodedMachine } from "../src/engine/types";
+
+// Slice one function definition out of the emitted .cc (up to its closing
+// brace at column 0).
+const fn = (cc: string, sig: string) => {
+  const at = cc.indexOf(sig);
+  return at < 0 ? "" : cc.slice(at, cc.indexOf("\n}", at) + 2);
+};
+
+// A model with no CommPattern send_down/send_up pair.
+const bareMachine = (): EncodedMachine => ({
+  name: "m0",
+  chain: ["m0"],
+  variables: [],
+  variableTypes: new Map(),
+  events: [
+    { label: "INITIALISATION", parameters: [], guards: [], actions: [] },
+    { label: "tick", parameters: [], guards: [], actions: [] },
+  ],
+  encodings: new Map(),
+});
 
 const load = (n: string) =>
   ({ name: `${n}.bum`, xml: readFileSync(`tests/fixtures/shdecom/${n}.bum`, "utf8") });
@@ -48,30 +69,48 @@ describe("codeEmitter", () => {
     expect(h).toContain("void handleMessageWhenUp(cMessage *msg) override;");
     expect(h).not.toContain("RoutingProtocolBase");
   });
-  it("emits SensorApp's own send function, no invented shell names", () => {
+  it("merges SensorApp's transmit structure into the pattern's send_down (thesis S4)", () => {
     const cc = file("cc");
-    expect(cc).toContain("void Pm1App::sendSensorPacket()");
-    expect(cc).toContain("packet->addTag<L3AddressReq>()->setDestAddress(sinkAddress);");
-    expect(cc).toContain("emit(packetSentSignal, packet);");
-    expect(cc).toContain("socket->send(packet);");
-    // The model's send_down/send_up bool event methods are the ONLY send pair
-    // beyond SensorApp's: the shell must not add a colliding sendDown/sendUp.
+    const body = fn(cc, "bool Pm1App::send_down");
+    expect(body).toContain("if (!(sentDown.count({x, pkt}) > 0)) return false;"); // model guard first
+    expect(body).toContain("packet->addTag<L3AddressReq>()->setDestAddress(sinkAddress);");
+    expect(body).toContain("emit(packetSentSignal, packet);");
+    expect(body).toContain("socket->send(packet);");
+    // merged, not duplicated: no separate shell send function (comments may
+    // still cite SensorApp::sendSensorPacket as provenance), no invented names
+    expect(cc).not.toMatch(/void Pm1App::sendSensorPacket/);
+    expect(cc).not.toMatch(/sendSensorPacket\(\);/);
     expect(cc).not.toMatch(/void Pm1App::sendDown\(/);
     expect(cc).not.toMatch(/void Pm1App::sendUp\(/);
+    expect(file("h")).not.toMatch(/virtual void sendSensorPacket/);
   });
-  it("receives in socketDataArrived directly, as SensorApp does", () => {
+  it("merges SensorApp's receive structure into the pattern's send_up (thesis S5)", () => {
     const cc = file("cc");
-    const body = cc.slice(cc.indexOf("void Pm1App::socketDataArrived"));
+    const body = fn(cc, "bool Pm1App::send_up");
+    expect(body).toContain("if (!(sentUp.count({x, pkt}) == 0)) return false;"); // model guards kept
     expect(body).toContain("receivedCount++;");
+    expect(body).toContain("sentUp.insert({x, pkt});"); // model actions kept
+  });
+  it("socketDataArrived keeps the packet-object mechanics and points at send_up", () => {
+    const cc = file("cc");
+    const body = fn(cc, "void Pm1App::socketDataArrived");
     expect(body).toContain("emit(packetReceivedSignal, packet);");
     expect(body).toContain("delete packet;");
+    expect(body).toContain("send_up");
   });
-  it("dispatches in handleMessageWhenUp: timer → sendSensorPacket, socket msg → receive path", () => {
+  it("timer branch of handleMessageWhenUp points at send_down and reschedules", () => {
     const cc = file("cc");
-    const body = cc.slice(cc.indexOf("void Pm1App::handleMessageWhenUp"));
-    expect(body).toContain("sendSensorPacket();");
+    const body = fn(cc, "void Pm1App::handleMessageWhenUp");
+    expect(body).toContain("send_down");
     expect(body).toContain("scheduleNextSensing(simTime());");
     expect(body).toContain("socket->processMessage(msg);");
+  });
+  it("falls back to SensorApp's own sendSensorPacket when a model has no CommPattern pair", () => {
+    const cc = emit(bareMachine(), "BareApp").find((f) => f.path === "BareApp.cc")!.content;
+    expect(cc).toContain("void BareApp::sendSensorPacket()");
+    expect(cc).toContain("socket->send(packet);");
+    const recv = fn(cc, "void BareApp::socketDataArrived");
+    expect(recv).toContain("receivedCount++;");
   });
   it("implements the lifecycle handlers with SensorApp bodies, not empty stubs", () => {
     const cc = file("cc");
@@ -85,7 +124,7 @@ describe("codeEmitter", () => {
     expect(cc).toContain("ApplicationBase::initialize(stage);");
     expect(cc).toContain('timer = new cMessage("sensingTimer");');
   });
-  it("marks the Event-B wiring extension points inside sendDown and sendUp", () => {
+  it("marks the identity-binding extension points in the dispatcher and receive callback", () => {
     const cc = file("cc");
     expect(cc).toContain("EXTENSION POINT (send-down flow)");
     expect(cc).toContain("EXTENSION POINT (send-up flow)");
@@ -96,9 +135,9 @@ describe("codeEmitter", () => {
     expect(cc).toContain("if (!(sentDown.count({x, pkt}) == 0)) return false;");
     expect(cc).toContain("return true;");
   });
-  it("renders an action-less event as a bool predicate (send_down)", () => {
-    const cc = file("cc");
-    expect(cc).toMatch(/bool Pm1App::send_down\([^)]*\)\s*\{\s*return [^;]+;\s*\}/);
+  it("renders an action-less non-pattern event as a bool predicate", () => {
+    const cc = emit(bareMachine(), "BareApp").find((f) => f.path === "BareApp.cc")!.content;
+    expect(cc).toMatch(/bool BareApp::tick\(\)\s*\{\s*return true;\s*\}/);
   });
   it("emits a NED-resolvable module: standalone simple like IApp, class bound via @class", () => {
     const ned = file("ned");

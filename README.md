@@ -13,10 +13,10 @@ generation run entirely in your browser. A headless CLI + compile gate are inclu
 **Live demo:** https://komenpetch.github.io/wsn-codegen/
 
 > **Application layer.** Each Event-B event is translated to a guarded `bool` method, wrapped in a
-> working SensorApp-shaped shell using SensorApp's own function names (timer-driven
-> `sendSensorPacket()`, socket-delivered `socketDataArrived()`). Wiring the event methods into the
-> shell's two marked extension points is the documented next step you complete by hand — see
-> [What it does / doesn't do](#what-it-does--doesnt-do).
+> working SensorApp-shaped shell. When the model has the CommPattern `send_down`/`send_up` pair,
+> those two event methods themselves carry SensorApp's packet-flow structure (transmit and receive);
+> binding the model identities at the two marked extension points is the step you complete by hand —
+> see [What it does / doesn't do](#what-it-does--doesnt-do).
 
 ---
 
@@ -76,27 +76,29 @@ single measurable success criterion (Form 01 §6). The exact toolchain paths and
 | `<Name>.h` / `<Name>.cc` | INET 4.5 `ApplicationBase` subclass shaped like INET's `SensorApp`; one guarded `bool` method per Event-B event |
 | `<Name>.ned` | standalone `simple <Name> like IApp` module bound to the class via `@class`, with SensorApp's parameters, signals, and statistics |
 
-The generated class is a working **SensorApp-shaped shell** that keeps SensorApp's own function
-names (no invented ones): `handleMessageWhenUp` dispatches the sensing timer into
-`sendSensorPacket()` (build a packet, tag it, `socket->send` — the send-down flow) and socket
-messages into `socketDataArrived()` (the send-up flow). A model's own `send_down`/`send_up` events,
-when present, stay what they are — guarded `bool` event methods — with no name collision against
-the shell. Lifecycle handlers open/close the
-`L3Socket`; the public constructor is seeded from `INITIALISATION`; state fields are ENC-typed. It
-`#include`s the two shared headers `eb_helpers.h` (pair-set `inDom`/`inRan`) and `eb_context.h`
-(element aliases + context constants).
+The generated class is a working **SensorApp-shaped shell**, and the SensorApp packet-flow
+structures are **merged into the model's own CommPattern events** when it has them (thesis
+Steps S4/S5): `send_down(...)` runs its Event-B guards, then SensorApp's transmit structure
+(build a packet, tag it, `socket->send` — the `SensorApp::sendSensorPacket` body); `send_up(...)`
+runs its guards, then the receive accounting, then its Event-B state actions. A model without the
+pair gets SensorApp's own `sendSensorPacket()` as fallback. `handleMessageWhenUp` dispatches the
+sensing timer (send-down flow) and socket messages (send-up flow via `socketDataArrived`);
+lifecycle handlers open/close the `L3Socket`; the public constructor is seeded from
+`INITIALISATION`; state fields are ENC-typed. It `#include`s the two shared headers `eb_helpers.h`
+(pair-set `inDom`/`inRan`) and `eb_context.h` (element aliases + context constants).
 
 ### What it does / doesn't do
 
 **Generated for you:** the model's state fields (typed by encoding form ENC1–6), the SensorApp-shaped
-shell (timer, socket, lifecycle, send-down/send-up paths), and one guarded `bool` method per event —
-early-return guards (the translated predicates) followed by the translated action statements.
+shell (timer, socket, lifecycle), one guarded `bool` method per event — early-return guards followed
+by the translated action statements — and, for the CommPattern `send_down`/`send_up` pair, the
+SensorApp transmit/receive structures merged inside those methods.
 
-**Hand-completed:** connecting the generated event methods to the shell at the two marked
-`EXTENSION POINT` comments (send-down flow in `sendSensorPacket()`, send-up flow in
-`socketDataArrived()`), i.e. the protocol-specific decision of *which* events fire on *which*
-packets. The generator produces the shell and the per-event logic, not the packet-dispatch
-decisions.
+**Hand-completed:** binding the model identities at the two marked `EXTENSION POINT` comments —
+in `handleMessageWhenUp` (which node/packet ids drive `start_tx`/`send_down` when the timer fires)
+and in `socketDataArrived` (which ids the delivered packet maps to for `send_up`). The generator
+produces the structures; it cannot know the protocol-specific identity mapping between simulation
+packets and model elements.
 
 ### Dropping into OMNeT++/INET
 

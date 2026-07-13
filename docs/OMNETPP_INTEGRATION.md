@@ -17,15 +17,17 @@ npm run generate -- <inputDir> <outDir>    # every machine found → <outDir>
 npm run generate                           # tests/fixtures/shdecom → out/
 ```
 
-The class is a working **SensorApp-shaped shell** keeping SensorApp's own function names:
-`handleMessageWhenUp` dispatches the sensing timer into `sendSensorPacket()` (the send-down flow)
-and socket messages into `socketDataArrived()` (the send-up flow); the lifecycle handlers
-open/close an `L3Socket` bound to the `networkProtocol` NED parameter; the public constructor is
-seeded from `INITIALISATION`. A model's own `send_down`/`send_up` events remain guarded `bool`
-event methods — no collision with the shell. The **hand-completed next step** is wiring the
-generated `bool` event methods into the two marked `EXTENSION POINT` comments (send-down flow in
-`sendSensorPacket()`, send-up flow in `socketDataArrived()`); the generator produces the shell and
-the per-event guard/action logic, not the packet-dispatch decisions.
+The class is a working **SensorApp-shaped shell**, with the SensorApp packet-flow structures
+**merged into the model's CommPattern events** when present (thesis S4/S5): `send_down(...)` =
+Event-B guards + the `SensorApp::sendSensorPacket` transmit structure; `send_up(...)` = Event-B
+guards + receive accounting + Event-B actions. A model without the pair gets SensorApp's own
+`sendSensorPacket()` as fallback. `handleMessageWhenUp` dispatches timer/socket messages; the
+lifecycle handlers open/close an `L3Socket` bound to the `networkProtocol` NED parameter; the
+public constructor is seeded from `INITIALISATION`. The **hand-completed next step** is the
+identity binding at the two marked `EXTENSION POINT` comments (in `handleMessageWhenUp`: which
+node/packet ids drive the transmit chain; in `socketDataArrived`: which ids a delivered packet
+maps to for `send_up`); the generator produces the structures, not the protocol-specific mapping
+between simulation packets and model elements.
 
 ## Toolchain on this machine
 
@@ -56,10 +58,11 @@ export macros mis-expand). **Status: the merged module passes, exit 0.** See
 Executing in the simulator (the "and executes" half of Form 01 §6) requires two hand-authored
 pieces the app-layer generator does not emit:
 
-1. **The extension-point wiring** — inside the generated `sendSensorPacket()` /
-   `socketDataArrived()`, decide which `bool` event methods fire on which packets (the
-   protocol-specific dispatch). The shell itself — timer, socket, `handleMessageWhenUp` dispatch,
-   lifecycle — is already generated.
+1. **The identity binding** — at the extension points in `handleMessageWhenUp` /
+   `socketDataArrived`, call the model's event methods with the right node/packet identities
+   (the protocol-specific mapping). The structures themselves — timer, socket, dispatch,
+   lifecycle, and the transmit/receive bodies inside `send_down`/`send_up` — are already
+   generated.
 2. **A simulation to host the module** — a network `.ned` that instantiates `<Name>` as `app[0]`
    on the nodes (it is an `IApp`), and an `omnetpp.ini` `[Config]` setting `sinkAddress` /
    `networkProtocol`.
