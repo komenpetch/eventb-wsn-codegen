@@ -8,13 +8,17 @@ most-refined machine, flattened) and emits three files:
 | `<Name>.h` / `<Name>.cc` | INET 4.5 `inet::ApplicationBase` subclass shaped like INET's `SensorApp` (`inet/applications/sensorapp`); one guarded `bool` method per Event-B event |
 | `<Name>.ned` | standalone `simple <Name> like IApp` module bound to the class via `@class`, mirroring `SensorApp.ned`'s parameters, signals, and statistics |
 
-plus the two shared headers the generated code `#include`s: `eb_helpers.h` (pair-set
-`inDom`/`inRan`) and `eb_context.h` (element aliases + context constants). Regenerate any
-folder of Event-B `.bum` files with:
+**From v4 (the default) these three files are the whole output** — the Event-B context and the
+pair-set helpers are inlined into `<Name>.h`, so nothing else has to be staged. v1–v3 instead
+`#include` two shared headers, `eb_helpers.h` (pair-set `inDom`/`inRan`) and `eb_context.h`
+(element aliases + context constants), which the CLI copies next to the generated code.
+
+Regenerate any folder of Event-B `.bum`/`.buc` files with:
 
 ```bash
-npm run generate -- <inputDir> <outDir>    # every machine found → <outDir>
-npm run generate                           # tests/fixtures/shdecom → out/
+npm run generate -- <inputDir> <outDir>        # v4 (default) → <outDir>
+npm run generate                               # tests/fixtures/shdecom → out/
+npm run generate -- <inputDir> <outDir> --v3   # an earlier frozen structure
 ```
 
 The class is a working **SensorApp-shaped shell**; the model's CommPattern pair is **emitted under
@@ -25,7 +29,17 @@ accounting + actions. Each carries an `// Event-B: …` provenance comment; all 
 their Event-B names. A model without the pair gets SensorApp's own `void sendSensorPacket()` as
 fallback. `handleMessageWhenUp` dispatches timer/socket messages; the
 lifecycle handlers open/close an `L3Socket` bound to the `networkProtocol` NED parameter; the
-public constructor is seeded from `INITIALISATION`. The **hand-completed next step** is the
+public constructor is seeded from `INITIALISATION`.
+
+**v4 additionally reaches `SensorApp` behaviour**: the sensing timer calls the baseline
+`void sendSensorPacket()`, the socket callback counts receptions, `openSocket` carries the
+ipv4/ipv6/address-type fallback, and `initialize` resets and `WATCH()`es the counters. Verified in
+an identical harness against the hand-written `SensorApp`: **59/60/60 packets sent and 6 received —
+the same on every node** (v3 sent nothing, because the transmit call sat behind an unbound
+extension point). The baseline and model forms coexist as overloads, so the translated `send_down`
+event is preserved unwired.
+
+The **hand-completed next step** is the
 identity binding at the two marked `EXTENSION POINT` comments (in `handleMessageWhenUp`: which
 node/packet ids drive the transmit chain; in `socketDataArrived`: which ids a delivered packet
 maps to for `send_up`); the generator produces the structures, not the protocol-specific mapping

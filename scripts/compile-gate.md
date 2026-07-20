@@ -30,8 +30,11 @@ done
 
 `-DINET_IMPORT` and `-I "$OPP_INC"` are mandatory: without the OMNeT++ include
 path `omnetpp.h` is not found, and without `-DINET_IMPORT` INET's export macros
-mis-expand. `-I out` lets each `.cc` resolve `eb_helpers.h` / `eb_context.h`
-(staged next to the generated code by `npm run generate`).
+mis-expand. `-I out` lets each `.cc` find its own header; for v1–v3 it also
+resolves `eb_helpers.h` / `eb_context.h`, which `npm run generate` stages next to
+the generated code. **v4 needs no staged headers** — it inlines them, so the gate
+passes with only the three generated files present, which is what makes the
+output self-contained on the web path as well as the CLI.
 
 ## Result (2026-07-13)
 

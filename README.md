@@ -63,17 +63,29 @@ npm run generate -- <inputDir> <outDir> # any Rodin project (every machine found
 npm run generate -- <inputDir> <outDir> --v1   # emitted-structure version (see below)
 ```
 
-`scripts/generate.ts` reads a folder of Event-B `.bum` files, **merges the whole refinement chain**
-into one module (the most-refined machine, flattened), and stages `eb_helpers.h` / `eb_context.h`
-next to it. Then syntax-check the generated `.cc` against real INET 4.5 headers — the project's
-single measurable success criterion (Form 01 §6). The exact toolchain paths and command are in
+`scripts/generate.ts` reads a folder of Event-B `.bum`/`.buc` files and **merges the whole
+refinement chain** into one module (the most-refined machine, flattened). Then syntax-check the
+generated `.cc` against real INET 4.5 headers — the project's single measurable success criterion
+(Form 01 §6). The exact toolchain paths and command are in
 **[scripts/compile-gate.md](scripts/compile-gate.md)**; the merged module passes `-fsyntax-only`.
 
-**Emitted-structure versions** (`--v1`/`--v2`/`--v3`, default v3) exist for the project report's
-compare table and all pass the compile gate: **v1** = the original pre-SensorApp structure
-(`RoutingProtocolBase`, empty lifecycle stubs, pattern pair untouched); **v2** = v1 with *only* the
-CommPattern pair changed into the merged SensorApp functions (plus the minimal members those bodies
-need); **v3** = the full SensorApp shell described below.
+**Emitted-structure versions** (`--v1`…`--v4`, **default v4**) all pass the compile gate. v1–v3 are
+**frozen** — they are the project report's compare-table evidence:
+
+| | Structure |
+|---|---|
+| **v1** | the original pre-SensorApp structure (`RoutingProtocolBase`, empty lifecycle stubs, pattern pair untouched) |
+| **v2** | v1 with *only* the CommPattern pair changed into the merged SensorApp functions (plus the minimal members those bodies need) |
+| **v3** | the full SensorApp shell described below |
+| **v4** | v3 + **SensorApp behavioural parity** and a **self-contained header** (current default) |
+
+**v4 is the one to use.** v3 compiled and ran but transmitted nothing: the transmit call sat behind
+an unbound extension point. v4 emits the baseline call, so the module reproduces `SensorApp`'s
+traffic exactly (measured in an identical harness: 0 → 59/60/60 packets sent and 6 received, the
+same as the baseline on every node). Similarity to `SensorApp` rose 67.3 % → 93.9 %, with the shell
+at 100 % and 15/15 functions statement-identical. v4 also inlines the Event-B context and helpers
+into the generated header — v1–v3 `#include` the `eb_context.h`/`eb_helpers.h` fixtures, which only
+the CLI staged, so a **web download of v1–v3 could not compile**. v4 has no such dependency.
 
 ---
 
@@ -94,8 +106,24 @@ renamed method carries an `// Event-B: …` provenance comment. A model without 
 SensorApp's own `void sendSensorPacket()` as fallback. `handleMessageWhenUp` dispatches the sensing
 timer (send-down flow) and socket messages (send-up flow via the `socketDataArrived` callback);
 lifecycle handlers open/close the `L3Socket`; the public constructor is seeded from
-`INITIALISATION`; state fields are ENC-typed. It `#include`s the two shared headers `eb_helpers.h`
-(pair-set `inDom`/`inRan`) and `eb_context.h` (element aliases + context constants).
+`INITIALISATION`; state fields are ENC-typed.
+
+**In v4** the module additionally reaches `SensorApp` behaviour: the sensing timer calls the
+baseline `void sendSensorPacket()`, the socket callback counts receptions, `openSocket` carries the
+ipv4/ipv6/address-type fallback, and `initialize` resets the counters and registers them with
+`WATCH()`. The baseline and model forms coexist as C++ overloads — `void sendSensorPacket()` does
+the transmitting, while `bool sendSensorPacket(Node, PktId)` remains the translated `send_down`
+event with its guards intact, still unwired. Driving the model form needs the simulation identities
+bound to model elements *and* the context populated, which is the network-layer stage; the emitted
+`EXTENSION POINT` comments say so at the call sites.
+
+The Event-B context and helpers are **inlined into the generated header in v4** (element aliases,
+context constants, and the pair-set `inDom`/`inRan` templates), so the output is self-contained.
+Constants are derived from the project's own `.buc` contexts, each citing the axiom that fixes it
+(e.g. `BROADCAST = -1` from `axm0_71`). Constants whose axioms give only properties — `ND ⊆ ℕ` names
+no elements — are declared and flagged for the simulation harness to populate. v1–v3 instead
+`#include` the `eb_helpers.h` / `eb_context.h` fixtures from `src/assets/`, which the CLI stages
+next to the output.
 
 ### What it does / doesn't do
 
@@ -106,9 +134,15 @@ by the translated action statements — and the CommPattern pair emitted as
 
 **Hand-completed:** binding the model identities at the two marked `EXTENSION POINT` comments —
 in `handleMessageWhenUp` (which node/packet ids drive `start_tx`/`send_down` when the timer fires)
-and in `socketDataArrived` (which ids the delivered packet maps to for `send_up`). The generator
-produces the structures; it cannot know the protocol-specific identity mapping between simulation
-packets and model elements.
+and in `socketDataArrived` (which ids the delivered packet maps to for `send_up`) — together with
+populating the context values the harness must supply (`ND`, `Dests`, `type`, `initialSrcAddr`,
+`finalDestAddr`, declared but empty, since the axioms give properties rather than elements). The
+generator produces the structures; it cannot know the protocol-specific identity mapping between
+simulation packets and model elements.
+
+Note that from v4 this is no longer needed just to get a *working* module: the baseline
+`sendSensorPacket()` already transmits. The hand step is what lets the **model** drive the
+transmission instead of the baseline shell.
 
 ### Dropping into OMNeT++/INET
 
@@ -122,7 +156,7 @@ and headless-run notes) see **[docs/OMNETPP_INTEGRATION.md](docs/OMNETPP_INTEGRA
 ```
 src/engine/     six-stage pipeline: parser → flattener → encodingResolver →
                 rules → ruleEngine → codeEmitter (pipeline.ts wires them)
-src/assets/     eb_helpers.h + eb_context.h (shared C++ headers, copied into output)
+src/assets/     eb_helpers.h + eb_context.h (staged next to v1–v3 output; v4 inlines them)
 src/io/         folder read + folder/zip write (File System Access + fallbacks)
 src/App.tsx     thin UI shell (machine list + output-name; merges the whole chain)
 scripts/        headless generate CLI + compile-gate.md
