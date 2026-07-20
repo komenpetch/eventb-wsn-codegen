@@ -61,12 +61,20 @@ export const RULES: Rule[] = [
       if (enc(R) === "map-of-sets") return `${R}[${a}].insert(${b});`;
       return `${R}.insert({${a}, ${b}});`; } },
 
-  // ── ∖ {a↦b}: pair-set erase (PS3) OR map-of-sets per-key remove (MS3), by enc ──
+  // ── ∖ {a↦b}: pair-set erase (PS3), map-of-sets per-key remove (MS3), or
+  //    function-shrink (FN4, the mirror of UNION-pair's FN3) — dispatched by
+  //    enc. A function is a map keyed by `a`, so removing the maplet means
+  //    erasing key `a` — but only when it currently maps to `b`, since
+  //    Event-B set-minus removes nothing if the pair is absent. Without this
+  //    case a function fell through to `R.erase({a, b})`, which does not
+  //    compile against std::map.
   { id: "DIFF-pair", match: re(/^(?<R>\w+)\s*≔\s*\k<R>\s*∖\s*\{\s*(?<a>\w+)\s*↦\s*(?<b>\w+)\s*\}$/),
     emit: (m, enc) => { const { R, a, b } = c(m);
-      return enc(R) === "map-of-sets"
-        ? `${R}[${a}].erase(${b}); if (${R}[${a}].empty()) ${R}.erase(${a});`
-        : `${R}.erase({${a}, ${b}});`; } },
+      if (enc(R) === "map-of-sets")
+        return `${R}[${a}].erase(${b}); if (${R}[${a}].empty()) ${R}.erase(${a});`;
+      if (enc(R) === "function")
+        return `if (auto it = ${R}.find(${a}); it != ${R}.end() && it->second == ${b}) ${R}.erase(it);`;
+      return `${R}.erase({${a}, ${b}});`; } },
 
   // ── PS6 range subtraction: R ≔ R ⩥ {y} ──
   { id: "PS6", match: re(/^(?<R>\w+)\s*≔\s*\k<R>\s*⩥\s*\{\s*(?<y>\w+)\s*\}$/),

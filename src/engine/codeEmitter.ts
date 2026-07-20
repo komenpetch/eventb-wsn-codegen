@@ -1,4 +1,4 @@
-import type { EncodedMachine, EncodingForm, GeneratedTree } from "./types";
+import type { EncodedMachine, EncodingForm, GeneratedTree, RawContext } from "./types";
 import { translateEvent } from "./ruleEngine";
 
 // Map an Event-B carrier token to its C++ alias (defined in eb_context.h).
@@ -77,19 +77,121 @@ const RECEIVE_BLOCK = [
   "    receivedCount++;",
 ];
 
+// ── Inlined Event-B context + helpers (v4 only) ─────────────────────────
+// v1–v3 `#include "eb_context.h"` / `"eb_helpers.h"`, two fixtures the CLI
+// copies next to the output. The web build never shipped them, so a downloaded
+// v3 module could not compile. v4 inlines their content into the generated
+// header, making the tool's output exactly the three contracted files
+// (.h/.cc/.ned) and self-contained on every path.
+//
+// Values are derived from the project's own contexts wherever an axiom fixes
+// one (`BROADCAST = −1`, `CTL_VAL = 0`, `partition(TYPE, CONTROL, {DATA})`).
+// Where the axioms state only properties — `ND ⊆ ℕ` names no elements — the
+// symbol is declared and left for the simulation harness to populate. Defaults
+// cover the standard WSN constants when a project ships a partial context.
+function contextBlock(contexts: RawContext[]): string {
+  const axioms = contexts.flatMap((c) => c.axioms.map((a) => ({ ctx: c.name, ...a })));
+  const constants = new Set(contexts.flatMap((c) => c.constants));
+  const fixed = new Map<string, string>();     // concrete values from axioms
+  const opaque = new Map<string, string>();    // declared, harness-populated
+  const note = (a: { ctx: string; label: string; text: string }): string =>
+    `  // ${a.ctx} ${a.label}: ${a.text}`;
+
+  // partition(TYPE, CONTROL, {DATA}) fixes the two packet-kind tags: DATA is a
+  // single element and CONTROL the disjoint remainder — encode 0 and {1}.
+  for (const a of axioms) {
+    const p = /partition\(\s*\w+\s*,\s*(\w+)\s*,\s*\{\s*(\w+)\s*\}\s*\)/.exec(a.text);
+    if (!p) continue;
+    fixed.set(p[2], `inline const int ${p[2]} = 0;${note(a)}`);
+    fixed.set(p[1], `inline std::set<int> ${p[1]} = {1};${note(a)}`);
+  }
+  // A bare `NAME = <int>` axiom pins a scalar (Rodin writes minus as U+2212).
+  for (const a of axioms) {
+    const m = /^\s*(\w+)\s*=\s*(−|-)?\s*(\d+)\s*$/.exec(a.text);
+    if (m && !fixed.has(m[1]))
+      fixed.set(m[1], `inline const int ${m[1]} = ${m[2] ? "-" : ""}${m[3]};${note(a)}`);
+  }
+  // Typed-but-unpopulated constants: functions become maps, subsets become sets.
+  for (const a of axioms) {
+    const f = /^\s*(\w+)\s*∈\s*(.+?)\s*(?:→|⇸|↔)\s*(.+?)\s*$/.exec(a.text);
+    if (f && constants.has(f[1]) && !fixed.has(f[1])) {
+      const dTok = (f[2].match(/\w+|ℤ/g) ?? []).pop()!;
+      const rTok = (f[3].replace(/[ℙ(){}∪]/g, " ").match(/\w+|ℤ/g) ?? [])[0]!;
+      opaque.set(f[1], `inline std::map<${alias(dTok)}, ${alias(rTok)}> ${f[1]};${note(a)}`);
+      continue;
+    }
+    const s = /^\s*(\w+)\s*⊆\s*(.+?)\s*$/.exec(a.text);
+    if (s && constants.has(s[1]) && !fixed.has(s[1]))
+      opaque.set(s[1], `inline std::set<int> ${s[1]};${note(a)}`);
+  }
+
+  // Fall back for anything a partial context leaves undefined, so the emitted
+  // code still compiles (the shdecom fixture ships only the TYPE context).
+  const fallbackFixed: [string, string][] = [
+    ["DATA", "inline const int DATA = 0;  // no partition axiom found — default tag"],
+    ["CONTROL", "inline std::set<int> CONTROL = {1};  // no partition axiom found — default tag"],
+    ["CTL_VAL", "inline const int CTL_VAL = 0;  // no axiom found — default"],
+  ];
+  const fallbackOpaque: [string, string][] = [
+    ["ND", "inline std::set<int> ND;  // not in the supplied context — harness-populated"],
+    ["Dests", "inline std::set<int> Dests;  // not in the supplied context — harness-populated"],
+    ["initialSrcAddr", "inline std::map<PktId, Node> initialSrcAddr;  // not in the supplied context"],
+    ["finalDestAddr", "inline std::map<PktId, Node> finalDestAddr;  // not in the supplied context"],
+    ["type", "inline std::map<PktId, int> type;  // not in the supplied context"],
+  ];
+  for (const [k, v] of fallbackFixed) if (!fixed.has(k)) fixed.set(k, v);
+  for (const [k, v] of fallbackOpaque) if (!opaque.has(k) && !fixed.has(k)) opaque.set(k, v);
+
+  const from = contexts.length ? contexts.map((c) => c.name).join(", ") : "no context files supplied";
+  return `// ── Event-B context (derived from ${from}) ──
+// Inlined so the generated module is self-contained: the tool's output is
+// exactly ${"`"}.h/.cc/.ned${"`"}. Two generated modules with DIFFERENT contexts must not
+// be linked into one executable — these are inline definitions at namespace
+// scope and would collide.
+using Node  = int;   // element label of the node carrier
+using PktId = int;   // element label of the packet carrier
+using Data  = int;   // ℤ payload values
+inline constexpr bool FALSE = false, TRUE = true;
+
+// Values an axiom pins:
+${[...fixed.values()].join("\n")}
+
+// ⚠ Declared only — the axioms give properties, not elements. The simulation
+// harness must populate these before any generated event method runs, or
+// ${"`"}.at()${"`"} throws std::out_of_range.
+${[...opaque.values()].join("\n")}
+
+// Pair-set domain/range membership (a relation keeps no separate key index).
+template<class R> bool inDom(const R& r, Node x) {
+  return std::any_of(r.begin(), r.end(), [&](const auto& p){ return p.first == x; });
+}
+template<class R> bool inRan(const R& r, PktId y) {
+  return std::any_of(r.begin(), r.end(), [&](const auto& p){ return p.second == y; });
+}`;
+}
+
 // Emitted-structure version, kept selectable for the project report's
 // compare table: 1 = the original pre-SensorApp structure (RoutingProtocolBase
 // + empty stubs, pattern pair untouched); 2 = v1 with ONLY the CommPattern
 // pair changed to the merged SensorApp functions (plus the minimal members
-// those bodies need); 3 = the full SensorApp shell (default).
-export type EmitVersion = 1 | 2 | 3;
+// those bodies need); 3 = the full SensorApp shell; 4 = v3 brought to SensorApp
+// behavioural parity (baseline send/receive wiring + self-contained header).
+// v1–v3 are frozen: they are the report's compare-table evidence.
+export type EmitVersion = 1 | 2 | 3 | 4;
 
-export function emit(model: EncodedMachine, name: string, version: EmitVersion = 3): GeneratedTree {
+export function emit(
+  model: EncodedMachine,
+  name: string,
+  version: EmitVersion = 3,
+  contexts: RawContext[] = [],
+): GeneratedTree {
   const fields = [...model.encodings.entries()]
     .map(([id, form]) => `    ${cppType(form, model.variableTypes.get(id))} ${id};`).join("\n");
 
   const hasSendDown = version >= 2 && model.events.some((e) => e.label === "send_down");
   const hasSendUp = version >= 2 && model.events.some((e) => e.label === "send_up");
+  // v4 = the SensorApp shell of v3 plus baseline behavioural parity.
+  const v4 = version === 4;
 
   const decls: string[] = [];
   const defs: string[] = [];
@@ -252,20 +354,20 @@ simple ${name} like IApp
   // ── v3 output (default): the full SensorApp shell ──
   const header = `${cxxBanner}
 #pragma once
-#include <map>
+${v4 ? "#include <algorithm>\n" : ""}#include <map>
 #include <set>
 #include <utility>
-#include "eb_helpers.h"
+${v4 ? "" : `#include "eb_helpers.h"
 #include "eb_context.h"
-#include "inet/applications/base/ApplicationBase.h"
+`}#include "inet/applications/base/ApplicationBase.h"
 #include "inet/common/Protocol.h"
 #include "inet/common/lifecycle/LifecycleOperation.h"
-#include "inet/common/packet/Packet.h"
+${v4 ? `#include "inet/common/lifecycle/NodeStatus.h"\n` : ""}#include "inet/common/packet/Packet.h"
 #include "inet/networklayer/common/L3Address.h"
 #include "inet/networklayer/contract/INetworkSocket.h"
 
 using namespace inet;
-
+${v4 ? `\n${contextBlock(contexts)}\n` : ""}
 // Module shell modelled on INET's SensorApp (inet/applications/sensorapp).
 // The model's CommPattern pair is emitted under SensorApp's names (thesis
 // S4/S5): Event-B send_down → sendSensorPacket(...) carrying the transmit
@@ -290,7 +392,7 @@ ${fields}
     // ── SensorApp shell: state ──
     INetworkSocket *socket = nullptr;
     cMessage *timer = nullptr;
-    long sendSeqNo = 0;
+${v4 ? "    NodeStatus *nodeStatus = nullptr;\n" : ""}    long sendSeqNo = 0;
     long sentCount = 0;
     long receivedCount = 0;
 
@@ -305,9 +407,15 @@ ${fields}
     void finish() override;
     void refreshDisplay() const override;
 
-    // SensorApp shell helpers${hasSendDown ? " (the transmit structure lives in sendSensorPacket(x, pkt) below — Event-B: send_down)" : ""}
+    // SensorApp shell helpers${hasSendDown && !v4 ? " (the transmit structure lives in sendSensorPacket(x, pkt) below — Event-B: send_down)" : ""}
     virtual void openSocket();
-${hasSendDown ? "" : "    virtual void sendSensorPacket();\n"}    virtual void scheduleNextSensing(simtime_t previous);
+${hasSendDown && v4
+    ? `    // Baseline SensorApp transmit, driven by the sensing timer. Overloads the
+    // model's bool sendSensorPacket(Node, PktId) below (Event-B: send_down),
+    // which stays for the network-layer phase: its guard chain needs the model
+    // identities bound and the context populated before it can fire.
+    virtual void sendSensorPacket();\n`
+    : hasSendDown ? "" : "    virtual void sendSensorPacket();\n"}    virtual void scheduleNextSensing(simtime_t previous);
     virtual void cancelNextSensing();
     virtual bool isEnabled();
 
@@ -341,7 +449,9 @@ ${decls.join("\n")}
 #include "inet/networklayer/common/L3AddressResolver.h"
 #include "inet/networklayer/common/L3AddressTag_m.h"
 #include "inet/networklayer/contract/L3Socket.h"
-
+${v4 ? `#include "inet/networklayer/contract/ipv4/Ipv4Socket.h"
+#include "inet/networklayer/contract/ipv6/Ipv6Socket.h"
+` : ""}
 Define_Module(${name});
 
 simsignal_t ${name}::packetSentSignal = registerSignal("packetSent");
@@ -366,7 +476,12 @@ void ${name}::initialize(int stage) {
         stopTime = par("stopTime");
         if (stopTime >= SIMTIME_ZERO && stopTime < startTime)
             throw cRuntimeError("Invalid startTime/stopTime parameters");
-        timer = new cMessage("sensingTimer");
+${v4 ? `
+        sendSeqNo = sentCount = receivedCount = 0;
+        WATCH(sendSeqNo);
+        WATCH(sentCount);
+        WATCH(receivedCount);
+` : ""}        timer = new cMessage("sensingTimer");
     }
 }
 
@@ -380,7 +495,40 @@ void ${name}::openSocket() {
     const char *sinkStr = par("sinkAddress");
     if (sinkStr[0])
         sinkAddress = L3AddressResolver().resolve(sinkStr);
+${v4 ? `
+    // Determine the network-layer protocol below us. An explicit parameter
+    // wins; otherwise infer it from the resolved address type, so a node with
+    // a destination but no configured protocol still opens a socket.
+    const Protocol *networkProtocol = nullptr;
+    const char *netProtoStr = par("networkProtocol");
+    if (*netProtoStr) {
+        networkProtocol = Protocol::getProtocol(netProtoStr);
+    }
+    else if (!sinkAddress.isUnspecified()) {
+        switch (sinkAddress.getType()) {
+            case L3Address::IPv4: networkProtocol = &Protocol::ipv4; break;
+            case L3Address::IPv6: networkProtocol = &Protocol::ipv6; break;
+            case L3Address::MODULEID:
+            case L3Address::MODULEPATH: networkProtocol = &Protocol::nextHopForwarding; break;
+            default:
+                throw cRuntimeError("${name}: cannot infer networkProtocol from address type %d",
+                                    (int)sinkAddress.getType());
+        }
+    }
+    else {
+        // no destination and no explicit protocol: nothing to open
+        EV_INFO << "${name}: passive mode without a networkProtocol parameter; not opening socket\\n";
+        return;
+    }
 
+    // Create the matching socket type; L3Socket carries an arbitrary payload.
+    if (networkProtocol == &Protocol::ipv4)
+        socket = new Ipv4Socket(gate("socketOut"));
+    else if (networkProtocol == &Protocol::ipv6)
+        socket = new Ipv6Socket(gate("socketOut"));
+    else
+        socket = new L3Socket(networkProtocol, gate("socketOut"));
+` : `
     // Bind an L3 socket over the configured network protocol; without one
     // the module stays passive (no socket), as in SensorApp's passive mode.
     const char *netProtoStr = par("networkProtocol");
@@ -389,11 +537,43 @@ void ${name}::openSocket() {
         return;
     }
     socket = new L3Socket(Protocol::getProtocol(netProtoStr), gate("socketOut"));
-    socket->bind(&Protocol::manet, L3Address());
+`}    socket->bind(&Protocol::manet, L3Address());
     socket->setCallback(this);
 }
 
-${hasSendDown ? "" : `// Send-down flow: build one packet and hand it down to the network layer
+${v4 ? `// Send-down flow: build one packet and hand it down to the network layer
+// through the socket (same as SensorApp). Driven by the sensing timer.
+${hasSendDown ? `// The model's bool sendSensorPacket(Node, PktId) below (Event-B: send_down)
+// carries the same transmit structure under its guard chain; it stays unwired
+// until the network-layer phase binds the model identities.
+` : ""}void ${name}::sendSensorPacket() {
+    if (sinkAddress.isUnspecified() || socket == nullptr) {
+        EV_WARN << "${name}: sinkAddress unspecified, skipping send\\n";
+        return;
+    }
+
+    char name[32];
+    snprintf(name, sizeof(name), "sensor-%ld", sendSeqNo);
+
+    Packet *packet = new Packet(name);
+    auto payload = makeShared<ByteCountChunk>(B(payloadLength));
+    packet->insertAtBack(payload);
+
+    packet->addTag<PacketProtocolTag>()->setProtocol(&Protocol::manet);
+    auto addrReq = packet->addTag<L3AddressReq>();
+    addrReq->setDestAddress(sinkAddress);
+
+    EV_INFO << "${name}: sending sample #" << sendSeqNo
+            << " (" << payloadLength << "B) to " << sinkAddress << endl;
+
+    emit(packetSentSignal, packet);
+    socket->send(packet);
+
+    sendSeqNo++;
+    sentCount++;
+}
+
+` : hasSendDown ? "" : `// Send-down flow: build one packet and hand it down to the network layer
 // through the socket (same as SensorApp).
 void ${name}::sendSensorPacket() {
     if (sinkAddress.isUnspecified() || socket == nullptr) {
@@ -435,7 +615,13 @@ void ${name}::cancelNextSensing() {
 void ${name}::handleMessageWhenUp(cMessage *msg) {
     if (msg->isSelfMessage()) {
         ASSERT(msg == timer);
-${hasSendDown
+${v4 && hasSendDown
+    ? `        sendSensorPacket();
+        // EXTENSION POINT (send-down flow): to drive the transmission from the
+        // model instead, bind the identities and call start_tx(x, pkt) then
+        // sendSensorPacket(x, pkt) (Event-B: send_down) here — that path also
+        // needs the context populated (see the header).`
+    : hasSendDown
     ? `        // EXTENSION POINT (send-down flow): bind the model identities and
         // drive the transmit chain — e.g. start_tx(...), then
         // sendSensorPacket(x, pkt) (Event-B: send_down), which carries the
@@ -447,7 +633,8 @@ ${hasSendDown
         socket->processMessage(msg);   // delivered to socketDataArrived
     }
     else {
-        EV_WARN << "dropping unaccepted message " << msg->getName() << "\\n";
+        EV_WARN << "${v4 ? `${name}: ` : ""}dropping unaccepted message " << msg->getName()${v4 ? `
+                << " (" << msg->getClassName() << ")\\n";` : ` << "\\n";`}
         delete msg;
     }
 }
@@ -455,7 +642,13 @@ ${hasSendDown
 // Send-up flow: a packet the network layer sent up arrives here via
 // handleMessageWhenUp → socket (same as SensorApp).
 void ${name}::socketDataArrived(INetworkSocket *, Packet *packet) {
-${hasSendUp
+${v4
+    ? `    // EXTENSION POINT (send-up flow):${hasSendUp ? ` to let the model consume the delivery,
+    // bind the identities and call socketDataArrived(x, pkt, nbrs) (Event-B:
+    // send_up) here. That overload keeps its own receivedCount++, so wiring it
+    // in means dropping the one below or the receive count doubles.` : ` dispatch to the generated
+    // Event-B receive-side event methods declared above.`}`
+    : hasSendUp
     ? `    // EXTENSION POINT (send-up flow): bind the model identities and let the
     // model consume the delivery — e.g. socketDataArrived(x, pkt, nbrs)
     // (Event-B: send_up), the model overload carrying the SensorApp receive
@@ -464,7 +657,9 @@ ${hasSendUp
     // receive-side event methods declared above.
     receivedCount++;`}
 
-    EV_INFO << "received " << packet->getByteLength() << "B\\n";
+    EV_INFO << "${v4 ? `${name}: ` : ""}received " << packet->getByteLength()${v4 ? `
+            << "B from " << packet->getTag<L3AddressInd>()->getSrcAddress() << endl;
+    receivedCount++;` : ` << "B\\n";`}
     emit(packetReceivedSignal, packet);
     delete packet;
 }
@@ -540,7 +735,7 @@ simple ${name} like IApp
 }
 `;
 
-  return version === 3
+  return version >= 3
     ? [
         { path: `${name}.h`, content: header },
         { path: `${name}.cc`, content: source },

@@ -22,6 +22,15 @@ describe("38-rule catalog", () => {
     expect(emit("ndBuff ≔ ndBuff ∖{x↦pkt}", buffers)).toBe("ndBuff.erase({x, pkt});");
     expect(emit("pktFwdr ≔ pktFwdr ∪ {pkt ↦ x}", buffers)).toBe("pktFwdr[pkt] = x;");
   });
+  it("FN4 function-shrink: ∖{a↦b} on a function erases the key, not a pair", () => {
+    // Mirror of FN3 above. A function is a std::map, so the pair-set spelling
+    // `R.erase({a, b})` does not compile; erase the key, and only when it still
+    // maps to b (Event-B set-minus removes nothing when the pair is absent).
+    expect(emit("pktFwdr ≔ pktFwdr ∖ {pkt ↦ x}", buffers))
+      .toBe("if (auto it = pktFwdr.find(pkt); it != pktFwdr.end() && it->second == x) pktFwdr.erase(it);");
+    // the pair-set and map-of-sets spellings are unchanged
+    expect(emit("ndBuff ≔ ndBuff ∖ {x ↦ pkt}", buffers)).toBe("ndBuff.erase({x, pkt});");
+  });
   it("PS4/PS5 dom/ran scans on a pair-set", () => {
     expect(emit("x ∈ dom(sentUp)", buffers)).toBe("inDom(sentUp, x)");
     expect(emit("pkt ∈ ran(sentUp)", buffers)).toBe("inRan(sentUp, pkt)");

@@ -66,7 +66,11 @@ export function leafMachine(files: EbFiles): string {
 // Generate one class for a single target machine, flattened over its refines
 // chain (base first). `outputName` is the emitted class/file name.
 export function generate(files: EbFiles, target: string, outputName: string, version: EmitVersion = 3): GeneratedTree {
-  return emit(resolveEncodings(flatten(parsedMachines(files), target)), outputName, version);
+  const raw = parsedMachines(files);
+  // Contexts reach the emitter so v4 can inline the Event-B context block
+  // (constants derived from the project's own axioms) instead of #including a
+  // shipped fixture; v1–v3 ignore them.
+  return emit(resolveEncodings(flatten(raw, target)), outputName, version, raw.contexts);
 }
 
 // Merge the whole project into ONE module: generate from the most-refined
@@ -76,5 +80,5 @@ export function generate(files: EbFiles, target: string, outputName: string, ver
 export function generateMerged(files: EbFiles, outputName?: string, version: EmitVersion = 3): GeneratedTree {
   const raw = parsedMachines(files);
   const leaf = leafOf(raw);
-  return emit(resolveEncodings(flatten(raw, leaf)), outputName ?? defaultName(leaf), version);
+  return emit(resolveEncodings(flatten(raw, leaf)), outputName ?? defaultName(leaf), version, raw.contexts);
 }

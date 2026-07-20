@@ -18,9 +18,9 @@ import { resolve } from "node:path";
 import { generateMerged, machineNames, leafMachine } from "../src/engine/pipeline";
 import type { EmitVersion } from "../src/engine/codeEmitter";
 
-const flag = process.argv.find((a) => /^--v[123]$/.test(a));
-const version = (flag ? Number(flag.slice(3)) : 3) as EmitVersion;
-const positional = process.argv.slice(2).filter((a) => !/^--v[123]$/.test(a));
+const flag = process.argv.find((a) => /^--v[1234]$/.test(a));
+const version = (flag ? Number(flag.slice(3)) : 4) as EmitVersion;
+const positional = process.argv.slice(2).filter((a) => !/^--v[1234]$/.test(a));
 const inDir = positional[0] ?? "tests/fixtures/shdecom";
 const outDir = positional[1] ?? "out";
 
@@ -32,9 +32,17 @@ mkdirSync(outDir, { recursive: true });
 const tree = generateMerged(files, undefined, version);
 for (const f of tree) writeFileSync(resolve(outDir, f.path), f.content, "utf8");
 
-// Stage the shared headers next to the generated code so #include resolves.
-copyFileSync("src/assets/eb_helpers.h", resolve(outDir, "eb_helpers.h"));
-copyFileSync("src/assets/eb_context.h", resolve(outDir, "eb_context.h"));
+// v1–v3 #include the shared fixtures, so stage them next to the generated code
+// for the compile gate. v4 inlines that content into its own header and is
+// self-contained — staging nothing is what makes its output exactly 3 files.
+if (version < 4) {
+  copyFileSync("src/assets/eb_helpers.h", resolve(outDir, "eb_helpers.h"));
+  copyFileSync("src/assets/eb_context.h", resolve(outDir, "eb_context.h"));
+}
 
 console.log(`Machines (${inDir}): ${machineNames(files).join(", ")} → merged into ${leafMachine(files)}`);
-console.log(`Generated ${tree.length} files (structure v${version}) + shared headers → ${outDir}/`);
+console.log(
+  `Generated ${tree.length} files (structure v${version})` +
+    (version < 4 ? " + shared headers" : " — self-contained, no shared headers") +
+    ` → ${outDir}/`,
+);

@@ -55,7 +55,10 @@ export default function App() {
     setBusy(true);
     try {
       append(`Merging ${machines.length} machine(s) into ${outputName.trim()}…`);
-      const tree = generateMerged(files, outputName.trim());
+      // v4: self-contained output. Earlier structures #include the eb_context.h
+      // / eb_helpers.h fixtures, which only the CLI staged — a download from
+      // here shipped neither and could not compile.
+      const tree = generateMerged(files, outputName.trim(), 4);
       const mode = await writeTree(tree);
       append(
         mode === "folder"
