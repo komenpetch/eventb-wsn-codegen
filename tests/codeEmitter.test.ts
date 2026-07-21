@@ -26,6 +26,20 @@ const bareMachine = (): EncodedMachine => ({
   encodings: new Map(),
 });
 
+// A model whose event names collide with base-class methods.
+const collidingMachine = (): EncodedMachine => ({
+  name: "m0",
+  chain: ["m0"],
+  variables: [],
+  variableTypes: new Map(),
+  events: [
+    { label: "INITIALISATION", parameters: [], guards: [], actions: [] },
+    { label: "receive", parameters: [], guards: [], actions: [] },
+    { label: "tick", parameters: [], guards: [], actions: [] },
+  ],
+  encodings: new Map(),
+});
+
 const load = (n: string) =>
   ({ name: `${n}.bum`, xml: readFileSync(`tests/fixtures/shdecom/${n}.bum`, "utf8") });
 const gen = (target: string, files: string[], name: string) =>
@@ -203,5 +217,26 @@ describe("emit versions (compare-table outputs)", () => {
   it("all versions break guard early-returns onto their own line", () => {
     for (const v of [1, 2, 3] as const)
       expect(vFile(v, "cc")).toContain("if (!(!nbrs.empty()))\n        return false;");
+  });
+});
+
+describe("base-class name collisions (v4)", () => {
+  const h = (v: 1 | 2 | 3 | 4) =>
+    emit(collidingMachine(), "CollApp", v).find((f) => f.path === "CollApp.h")!.content;
+
+  it("re-exposes a hidden base overload when an event is named like one", () => {
+    // `bool receive(...)` would otherwise hide cSimpleModule::receive() and its
+    // timeout overload (-Woverloaded-virtual).
+    expect(h(4)).toContain("using omnetpp::cSimpleModule::receive;");
+    // the Event-B name itself is kept
+    expect(h(4)).toContain("bool receive(");
+  });
+
+  it("emits no using-declaration for events that collide with nothing", () => {
+    expect(h(4)).not.toContain("cSimpleModule::tick");
+  });
+
+  it("leaves the frozen structures v1-v3 untouched", () => {
+    for (const v of [1, 2, 3] as const) expect(h(v)).not.toContain("using omnetpp::cSimpleModule");
   });
 });

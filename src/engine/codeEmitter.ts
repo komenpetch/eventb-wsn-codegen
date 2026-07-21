@@ -193,6 +193,18 @@ export function emit(
   // v4 = the SensorApp shell of v3 plus baseline behavioural parity.
   const v4 = version === 4;
 
+  // Event names that collide with a base-class method. A generated
+  // `bool receive(Node, PktId)` HIDES omnetpp::cSimpleModule::receive() and its
+  // timeout overload (-Woverloaded-virtual). That is harmless while dispatch is
+  // handleMessage-style, but it is a real trap: an event named `send` would hide
+  // the message-sending API the shell itself relies on. A using-declaration
+  // restores the base overloads while keeping the Event-B name.
+  const BASE_METHODS = new Set([
+    "receive", "send", "sendDelayed", "sendDirect",
+    "scheduleAt", "scheduleAfter", "cancelEvent", "cancelAndDelete", "wait",
+  ]);
+  const hidesBase = new Set<string>();
+
   const decls: string[] = [];
   const defs: string[] = [];
   for (const raw of model.events) {
@@ -206,6 +218,7 @@ export function emit(
       : raw.label === "send_up" ? "socketDataArrived"
       : undefined;
     const cppName = inetName ?? t.label;
+    if (BASE_METHODS.has(cppName)) hidesBase.add(cppName);
     decls.push(
       inetName
         ? `    bool ${cppName}(${params(raw)});   // Event-B: ${raw.label}`
@@ -428,7 +441,12 @@ ${hasSendDown && v4
     void socketDataArrived(INetworkSocket *socket, Packet *packet) override;
     void socketClosed(INetworkSocket *socket) override;
 
-    // Event-B events, one guarded bool method each: the guards are checked
+${v4 && hidesBase.size ? `    // These Event-B event names also name a base-class method. Keep the model's
+    // name, but re-expose the base overloads so they are not hidden
+    // (-Woverloaded-virtual); overload resolution still picks the right one.
+${[...hidesBase].map((n) => `    using omnetpp::cSimpleModule::${n};`).join("\n")}
+
+` : ""}    // Event-B events, one guarded bool method each: the guards are checked
     // first (early return), then the actions run.
 ${decls.join("\n")}
 
