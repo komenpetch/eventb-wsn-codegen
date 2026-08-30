@@ -58,7 +58,41 @@ export default function App() {
       // v4: self-contained output. Earlier structures #include the eb_context.h
       // / eb_helpers.h fixtures, which only the CLI staged — a download from
       // here shipped neither and could not compile.
+      //
+      // Timed here so the deployed tool can show what generation costs on the
+      // artefact people actually run. ONLY generateMerged is inside the timer:
+      // writeTree awaits a folder picker, and user think-time is not generation
+      // time.
+      //
+      // THIS IS A DEMONSTRATION FIGURE, NOT THE PAPER'S MEASUREMENT. Browsers
+      // clamp performance.now() to 100 us for Spectre mitigation, which is
+      // coarser than three of the pipeline's four stages, and give no reliable
+      // heap reading at all. The paper's efficiency section uses the Node
+      // campaign (paper2/data/MEASURING.md), which has a sub-microsecond clock
+      // and an exact post-GC heap baseline. The caveat travels with the number,
+      // in the console object below, so it cannot be quoted out of context.
+      const t0 = performance.now();
       const tree = generateMerged(files, outputName.trim(), 4);
+      const genMs = performance.now() - t0;
+
+      const outLines = tree.reduce(
+        (n, x) => n + x.content.replace(/\n$/, "").split("\n").length, 0);
+      append(`Generated in ${genMs.toFixed(1)} ms (${outLines} lines). See the browser console for detail.`);
+      console.info("WSN-CodeGen generation", {
+        generationMs: Number(genMs.toFixed(3)),
+        inputFiles: files.length,
+        machines: machines.length,
+        mergedInto: outputName.trim(),
+        emittedFiles: tree.map((f) => f.path),
+        emittedLines: outLines,
+        note:
+          "Wall-clock for the generation pipeline only, excluding file output. " +
+          "Browsers clamp performance.now() to ~100 us, so this is a single " +
+          "end-to-end figure and cannot be broken down by stage; peak heap is " +
+          "not measurable here at all. It demonstrates that generation is " +
+          "interactive, and is NOT the measurement reported in the paper.",
+      });
+
       const mode = await writeTree(tree);
       append(
         mode === "folder"
