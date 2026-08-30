@@ -235,9 +235,33 @@ export function emit(
       : raw.label === "send_down" ? TRANSMIT_BLOCK
       : raw.label === "send_up" ? RECEIVE_BLOCK
       : [];
+    // A partially translated event must NOT report success. Returning true with an
+    // unmatched guard claims the event fired on a precondition never checked; with an
+    // unmatched action it claims a state change that never happened. Either is a
+    // SILENT fault of exactly the kind this project's V3 defect was — invisible to the
+    // compiler and to the simulator, and detectable only by comparing behaviour. The
+    // UNTRANSLATED comments make the gap visible to a reader of the code; this makes it
+    // visible to the program. The event stays emitted (so the module still compiles and
+    // the shape of the model is still there to read), it simply refuses to claim it ran.
+    const incomplete = noteG.length > 0 || noteA.length > 0;
+    const refuse = incomplete
+      ? [
+          // NB: this comment must NOT contain the token the markers use. The rule gap is
+          // measured by counting occurrences of that token in the emitted module
+          // (wsn-codegen/scripts/benchmark.ts), so mentioning it here would inflate the
+          // reported gap by one per incomplete event and corrupt the published figure.
+          "    // Refuses to fire: this event has clauses the rule catalog does not cover",
+          "    // (see the markers above). Returning true would report a transition that did",
+          "    // not fully happen. Remove this once those clauses translate.",
+          "    return false;",
+        ]
+      : ["    return true;"];
+
     if (inject.length === 0 && t.actions.length === 0 && noteA.length === 0) {
       const pred = t.guards.length ? t.guards.join(" && ") : "true";
-      const body = [...noteG, `    return ${pred};`].join("\n");
+      const body = incomplete
+        ? [...noteG, ...refuse].join("\n")
+        : [...noteG, `    return ${pred};`].join("\n");
       defs.push(`${prov}bool ${name}::${cppName}(${params(raw)}) {\n${body}\n}`);
     } else {
       const body = [
@@ -247,7 +271,7 @@ export function emit(
         ...inject,
         ...t.actions.map((a) => `    ${a}`),
         ...noteA,
-        "    return true;",
+        ...refuse,
       ].join("\n");
       defs.push(`${prov}bool ${name}::${cppName}(${params(raw)}) {\n${body}\n}`);
     }
