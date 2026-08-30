@@ -46,11 +46,17 @@ export const RULES: Rule[] = [
   { id: "FN3-app", match: re(/^(?<f>\w+)\(\s*(?<k>\w+)\s*\)\s*≔\s*(?<v>\w+)$/),
     emit: (m) => { const { f, k, v } = c(m); return `${f}[${k}] = ${v};`; } },
 
-  // ── FN3 relational override: f ≔ f  {k↦v}. Rodin stores the override
-  // operator as the private-use codepoint U+E103 (it renders as tofu/nothing
-  // outside Rodin, so it may also survive as a bare space in copied text);
-  // ⊴ is tolerated as a legacy spelling. ──
-  { id: "FN3-override", match: re(/^(?<f>\w+)\s*≔\s*\k<f>\s*(?:[⊴]\s*)?\{\s*(?<k>\w+)\s*↦\s*(?<v>\w+)\s*\}$/),
+  // ── FN3 relational override: f ≔ f  {k↦v}.
+  // THREE SPELLINGS OCCUR IN REAL PROJECTS and all must be accepted:
+  //   U+E103   Rodin's private-use codepoint. It renders as nothing outside Rodin,
+  //            so it also survives as a bare space in copied text.
+  //   U+2295 ⊕ what a plain Rodin export of this project's own pM1 contains. Found
+  //            2026-08-10 by generating from the pristine export and getting one
+  //            more UNTRANSLATED than from the working copy.
+  //   U+22B4 ⊴ a legacy spelling.
+  // Missing a spelling does not fail loudly: the action goes untranslated and the
+  // event refuses to fire, which reads as a gap in the MODEL, not in the parser. ──
+  { id: "FN3-override", match: re(/^(?<f>\w+)\s*≔\s*\k<f>\s*(?:[⊴⊕]\s*)?\{\s*(?<k>\w+)\s*↦\s*(?<v>\w+)\s*\}$/),
     emit: (m) => { const { f, k, v } = c(m); return `${f}[${k}] = ${v};`; } },
 
   // ── ∪ {a↦b}: pair-set insert (PS2), function-extend (FN3), or map-of-sets
@@ -62,7 +68,7 @@ export const RULES: Rule[] = [
       return `${R}.insert({${a}, ${b}});`; } },
 
   // ── ∖ {a↦b}: pair-set erase (PS3), map-of-sets per-key remove (MS3), or
-  //    function-shrink (FN4, the mirror of UNION-pair's FN3) — dispatched by
+  //    function-shrink (FN4, the mirror of the union case above) — dispatched by
   //    enc. A function is a map keyed by `a`, so removing the maplet means
   //    erasing key `a` — but only when it currently maps to `b`, since
   //    Event-B set-minus removes nothing if the pair is absent. Without this
@@ -115,7 +121,8 @@ export const RULES: Rule[] = [
     emit: (m) => { const { a, b, op, R } = c(m);
       return `${R}.count({${a}, ${b}}) ${op === "∈" ? "> 0" : "== 0"}`; } },
 
-  // ── domain membership: x ∈ dom(R) / ∉  (PS4 pair-set scan, else FN2 count) ──
+  // ── domain membership: x ∈ dom(R) / ∉  (PS4 pair-set scan; FN2 function count;
+  //    MS4 map-of-sets count — the last two share the emitted form) ──
   { id: "DOM", match: re(/^(?<x>\w+)\s*(?<op>∈|∉)\s*dom\(\s*(?<R>\w+)\s*\)$/),
     emit: (m, enc) => { const { x, op, R } = c(m);
       if (enc(R) === "pair-set") return op === "∈" ? `inDom(${R}, ${x})` : `!inDom(${R}, ${x})`;
