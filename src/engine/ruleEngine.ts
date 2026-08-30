@@ -43,7 +43,23 @@ export interface TranslatedEvent {
   untranslatedActions: string[];
 }
 
+// Opt-in accounting for the benchmark only. The framework's step 2, Rule
+// Mapping, is encoding resolution PLUS rule application, but rule application
+// happens inside the emitter, which also does the assembly belonging to step 3.
+// Measured on the case study, rule application is about 56 % of the emitter's
+// time, so attributing all of it to step 3 misreports both steps by more than a
+// factor of two. This counter lets the benchmark split them without the emitter
+// having to know about timing. Off unless the benchmark turns it on, so the
+// shipped tool pays nothing.
+export const ruleClock = { on: false, ms: 0 };
+
 export function translateEvent(ev: FlatEvent, model: EncodedMachine): TranslatedEvent {
+  if (ruleClock.on) {
+    ruleClock.on = false;                       // avoid re-entry double counting
+    const t = performance.now();
+    try { return translateEvent(ev, model); }
+    finally { ruleClock.ms += performance.now() - t; ruleClock.on = true; }
+  }
   const enc = (id: string) => model.encodings.get(id);
   // Machine-only: any identifier that is neither a machine variable nor an
   // event parameter is a context name (ND, Dests, type, …) for typing-guard
