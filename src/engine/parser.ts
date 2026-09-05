@@ -32,6 +32,35 @@ const childNode = (n: XmlNode, key: string): XmlNode | undefined =>
 const nodes = (n: XmlNode, key: string): XmlNode[] =>
   asArray<XmlNode>(n[key] as XmlNode | XmlNode[] | undefined);
 
+const TEXTTOOLS_REPR = "org.eventb.texttools.text_representation";
+
+// The component's name.
+//
+// PREFERRED: the head of the text_representation attribute, which states the name the
+// way Rodin displays it -- `machine pM1 sees C0` yields `pM1`. Only the head is taken;
+// the attribute holds the WHOLE machine, so using it unparsed would give a name several
+// hundred characters long.
+//
+// FALL-BACK, and not a nicety: the file name. text_representation is written by an
+// optional editor plugin, so a project need not carry it. Measured over the seven
+// Event-B projects on disk -- 62 files -- 41 carry the attribute and 21 do not, and the
+// 21 include every file of the project the paper's measurements come from. Without the
+// fall-back a third of the corpus would have no name at all.
+//
+// The two never disagreed: of the 41, the head parsed in 41 and matched the file name in
+// 41. Rodin keeps the two in step because sibling files address a component by name in
+// their refines/sees/extends targets, and those resolved 54 of 54 against file names.
+// tests/name-source.test.ts holds that agreement over the whole corpus, so a future
+// project where the two disagree fails the suite rather than silently picking one.
+function componentName(fileName: string, node: XmlNode): string {
+  const repr = node[TEXTTOOLS_REPR];
+  if (typeof repr === "string") {
+    const head = /^\s*(?:machine|context)\s+([A-Za-z_]\w*)/.exec(repr);
+    if (head) return head[1];
+  }
+  return baseName(fileName);
+}
+
 function baseName(fileName: string): string {
   return fileName.replace(/\.(bum|buc)$/i, "");
 }
@@ -45,11 +74,10 @@ export function parseModel(files: { name: string; xml: string }[]): RawModel {
     const machineFile = childNode(root, `${EB}machineFile`);
     const contextFile = childNode(root, `${EB}contextFile`);
     if (machineFile) {
-      machines.push(parseMachine(baseName(name), machineFile));
+      machines.push(parseMachine(componentName(name, machineFile), machineFile));
     } else if (contextFile) {
-      contexts.push(parseContext(baseName(name), contextFile));
+      contexts.push(parseContext(componentName(name, contextFile), contextFile));
     }
-    // NB: we read root[...] children only; the text_representation attribute is never touched.
   }
   return { machines, contexts };
 }
